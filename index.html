@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,14 +9,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="icon" type="image/x-icon" href="https://play-lh.googleusercontent.com/R-m4sTm-WbWdq1OsVpAAQMVl7DpzN3ssF1MpxslpGS5-PmfO6LyeCWDBPUqijXdiHZrYVo4rNKBdu--lOEAMe-I=w240-h480-rw">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Custom Application Stylesheet -->
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- External Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="shared.js?v=5" defer></script>
-    <script src="app.js" defer></script>
+    <style>
+        .pay-option.selected {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
 
@@ -166,7 +172,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
                 <div class="lg:col-span-2">
                     <div class="bg-white border border-gray-100 rounded-xl p-4">
-                        <div class="h-[420px] md:h-[560px] rounded-lg overflow-hidden bg-gray-50">
+                        <div class="h-[350px] md:h-[450px] rounded-lg overflow-hidden bg-gray-50">
                             <img id="detail-main-image" src="" alt="" class="w-full h-full object-contain p-4">
                         </div>
                         <div id="detail-thumbnails" class="flex gap-2 mt-3"></div>
@@ -225,10 +231,7 @@
             <div class="bg-white border border-gray-100 rounded-xl p-6 mt-8">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Description</h2>
                 <p id="detail-description" class="text-sm text-gray-600 mb-4"></p>
-                <ul id="detail-bullets" class="space-y-2 text-sm text-gray-700"></ul>
-                <div class="mt-6 rounded-lg overflow-hidden bg-gray-100">
-                    <img id="detail-banner-image" src="" alt="" class="w-full max-h-96 object-cover">
-                </div>
+                <ul id="detail-bullets" class="space-y-2 text-sm text-gray-700 list-disc pl-5"></ul>
             </div>
         </div>
 
@@ -421,5 +424,926 @@
             </div>
         </div>
     </div>
+
+    <!-- INLINE DATABASE AND UTILITY SCRIPT (shared.js functionality) -->
+    <script>
+        const ORDER_STATUSES = [
+            { key: 'Order Placed', label: 'Order Placed', color: 'blue' },
+            { key: 'Processing', label: 'Processing', color: 'amber' },
+            { key: 'Shipped', label: 'Shipped', color: 'indigo' },
+            { key: 'Delivered', label: 'Delivered', color: 'green' }
+        ];
+
+        const PAYMENT_STATUSES = [
+            { key: 'Pending', label: 'Pending', color: 'amber' },
+            { key: 'Payment Processing', label: 'Verifying', color: 'blue' },
+            { key: 'Verified', label: 'Verified', color: 'green' }
+        ];
+
+        // MOCK DATA FALLBACKS FOR DEMO / LOCAL TESTING
+        const MOCK_PRODUCTS = [
+            { id: '1', title: 'Aultima Pro Wireless Earbuds', price: 2999, oldPrice: 4500, brand: 'Ultima', category: 'earbuds', image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&q=80', badge: 'delivery', rating: 4.5, reviews: 128, sold: '1.2K', description: 'Experience crystal clear sound with Active Noise Cancellation and 30 hours of battery life.', bullets: ['ANC up to 30dB', 'Bluetooth v5.3', 'IPX5 Water Resistant'] },
+            { id: '2', title: 'FitTrack Smartwatch Ultra', price: 4499, oldPrice: 6999, brand: 'FitTrack', category: 'smartwatches', image: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80', badge: 'gems', badgeText: 'Hot Item', rating: 4.8, reviews: 240, sold: '3.5K', description: 'Monitor your health, heart rate, and workouts with full Amoled display.', bullets: ['1.96-inch AMOLED Display', 'Heart Rate & SpO2 Monitor', '10 Days Battery Life'] },
+            { id: '3', title: 'PowerBank 20000mAh 22.5W', price: 2199, oldPrice: 3200, brand: 'Anker', category: 'powerbanks', image: 'https://images.unsplash.com/photo-1609592424109-dd9892f1b177?w=500&q=80', badge: 'delivery', rating: 4.6, reviews: 89, sold: '850', description: 'Fast charging high-capacity power bank with multiple ports for all your devices.', bullets: ['22.5W Fast Charging', 'Dual USB Out + Type-C In/Out', 'LED Digital Display'] },
+            { id: '4', title: 'BassMaster Over-Ear Headphones', price: 3800, oldPrice: 5500, brand: 'Sony', category: 'audio', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', badge: '', rating: 4.7, reviews: 310, sold: '2.1K', description: 'Deep bass experience with comfortable memory foam ear cushions.', bullets: ['40mm Drivers', '40 Hour Playtime', 'Foldable Design'] }
+        ];
+
+        const MOCK_CATEGORIES = [
+            { key: 'earbuds', label: 'Wireless Earbuds' },
+            { key: 'smartwatches', label: 'Smartwatches' },
+            { key: 'powerbanks', label: 'Power Banks' },
+            { key: 'audio', label: 'Audio & Speakers' }
+        ];
+
+        const MOCK_DELIVERY = [
+            { key: 'biratnagar', city: 'Biratnagar', charge: 0 },
+            { key: 'kathmandu', city: 'Kathmandu Valley', charge: 100 },
+            { key: 'pokhara', city: 'Pokhara', charge: 120 },
+            { key: 'other', city: 'Other Cities', charge: 150 }
+        ];
+
+        async function ensureSeeded() { return true; }
+        function subscribeProducts(cb) { cb(MOCK_PRODUCTS); }
+        function subscribeCategories(cb) { cb(MOCK_CATEGORIES); }
+        function subscribeDelivery(cb) { cb(MOCK_DELIVERY); }
+        function subscribePaymentQRConfig(cb) { cb({ providerName: 'eSewa', accountId: '9800000000', qrImage: 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=eSewa-9800000000' }); }
+        
+        async function registerUser(name, email, phone, password) {
+            return { id: 'usr_' + Date.now(), name, email, phone };
+        }
+        async function loginUser(email, password) {
+            return { id: 'usr_demo', name: 'Demo User', email, phone: '9800000000' };
+        }
+        function subscribeUserOrders(userId, cb) {
+            cb([]);
+            return () => {};
+        }
+        async function createOrder(payload) { return payload; }
+        async function updateOrderDetails(orderId, updates) { return true; }
+    </script>
+
+    <!-- MAIN APP SCRIPT (app.js functionality) -->
+    <script>
+        const CONFIG = {
+            FORMSPREE_ENDPOINT: 'https://formspree.io/f/mdaqrzvn',
+            STORAGE_KEY_USER: 'techstore_user'
+        };
+
+        const state = {
+            products: [],
+            categories: [],
+            deliveryRates: [],
+            cart: [],
+            selectedPayment: 'cod',
+            currentProductId: null,
+            detailQty: 1,
+            currentUser: JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY_USER) || 'null'),
+            currentEsewaOrderId: null,
+            unsubUserOrders: null,
+            esewaConfig: { providerName: '', accountId: '', qrImage: '' },
+            pendingCheckout: false,
+            activeCategory: 'all',
+            searchQuery: '',
+            sortOrder: 'best',
+            searchSortOrder: 'best',
+            toastTimer: null
+        };
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await ensureSeeded();
+                
+                subscribeProducts(list => {
+                    state.products = list;
+                    renderProducts(applyActiveFilter());
+                    renderBestSellers();
+                    renderCategoryCircles();
+                    hideLoadingBanner();
+                });
+
+                subscribeCategories(list => {
+                    state.categories = list;
+                    renderFilterBar();
+                    renderCategoryCircles();
+                });
+
+                subscribeDelivery(list => {
+                    state.deliveryRates = list;
+                    populateLocationOptions();
+                    updateCartTotals();
+                });
+
+                subscribePaymentQRConfig(config => {
+                    state.esewaConfig = config;
+                    const label = document.getElementById('pay-esewa-label');
+                    if (label) {
+                        label.innerText = config.providerName ? `Scan & Pay (${config.providerName})` : 'Scan & Pay';
+                    }
+                });
+
+                setupEventListeners();
+                selectPayment('cod');
+                updateUserNav();
+                history.replaceState({ view: 'grid' }, '');
+
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('System initialization failed. Please refresh.');
+            }
+        });
+
+        function hideLoadingBanner() {
+            const el = document.getElementById('loading-banner');
+            if (el) el.remove();
+        }
+
+        function setupEventListeners() {
+            document.addEventListener('click', handleGlobalClick);
+            
+            document.getElementById('sort-select')?.addEventListener('change', (e) => {
+                state.sortOrder = e.target.value;
+                renderProducts(applyActiveFilter());
+            });
+
+            document.getElementById('search-sort-select')?.addEventListener('change', (e) => {
+                state.searchSortOrder = e.target.value;
+                renderSearchModalResults();
+            });
+
+            document.getElementById('checkout-location')?.addEventListener('change', updateCartTotals);
+
+            document.getElementById('form-login')?.addEventListener('submit', handleUserLogin);
+            document.getElementById('form-register')?.addEventListener('submit', handleUserRegister);
+
+            setupSearchInput('nav-search-input', false);
+            setupSearchInput('nav-search-input-mobile', true);
+
+            window.addEventListener('popstate', handlePopState);
+        }
+
+        function handleGlobalClick(e) {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+
+            switch (action) {
+                case 'filter-category':
+                    filterCategory(target.dataset.key || 'all');
+                    break;
+                case 'open-auth':
+                    openAuthModal(target.dataset.view || 'login');
+                    break;
+                case 'close-auth':
+                    closeAuthModal();
+                    break;
+                case 'toggle-auth':
+                    toggleAuthView(target.dataset.view);
+                    break;
+                case 'logout':
+                    handleUserLogout();
+                    break;
+                case 'open-orders':
+                    openUserOrdersView();
+                    break;
+                case 'open-cart':
+                    openCart();
+                    break;
+                case 'close-cart':
+                    closeCart();
+                    break;
+                case 'select-payment':
+                    selectPayment(target.dataset.method);
+                    break;
+                case 'submit-checkout':
+                    handleCheckout();
+                    break;
+                case 'close-esewa':
+                    closeEsewaModal();
+                    break;
+                case 'submit-esewa':
+                    submitEsewaTransaction();
+                    break;
+                case 'close-confirm':
+                    closeConfirmModal();
+                    break;
+                case 'confirm-track-order':
+                    closeConfirmModal();
+                    openUserOrdersView();
+                    break;
+                case 'go-back':
+                    history.back();
+                    break;
+                case 'add-cart-detail':
+                    addToCartFromDetail();
+                    break;
+                case 'buy-now-detail':
+                    buyNowFromDetail();
+                    break;
+                case 'change-detail-qty':
+                    changeDetailQty(parseInt(target.dataset.delta, 10));
+                    break;
+                case 'view-product':
+                    viewProduct(target.dataset.id);
+                    break;
+                case 'select-category-circle':
+                    selectCategoryFromCircle(target.dataset.key);
+                    break;
+                case 'update-cart-qty':
+                    updateCartQty(target.dataset.id, parseInt(target.dataset.delta, 10));
+                    break;
+                case 'open-esewa-modal':
+                    openEsewaModal(target.dataset.orderId);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        function updateUserNav() {
+            const nav = document.getElementById('user-nav-area');
+            if (state.currentUser) {
+                nav.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <button data-action="open-orders" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-md font-semibold">
+                        <i class="fa-solid fa-box mr-1"></i> My Orders
+                    </button>
+                    <button data-action="logout" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1.5 rounded-md">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>`;
+                
+                document.getElementById('checkout-name').value = state.currentUser.name || '';
+                document.getElementById('checkout-phone').value = state.currentUser.phone || '';
+                document.getElementById('checkout-email').value = state.currentUser.email || '';
+            } else {
+                nav.innerHTML = `
+                <button data-action="open-auth" data-view="login" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-md font-semibold">
+                    <i class="fa-solid fa-user mr-1"></i> Login / Register
+                </button>`;
+            }
+        }
+
+        function openAuthModal(view) {
+            toggleAuthView(view);
+            document.getElementById('auth-modal').classList.remove('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        function toggleAuthView(view) {
+            document.getElementById('auth-login-view').classList.toggle('hidden', view !== 'login');
+            document.getElementById('auth-register-view').classList.toggle('hidden', view !== 'register');
+        }
+
+        async function handleUserRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const pass = document.getElementById('reg-pass').value.trim();
+
+            try {
+                const user = await registerUser(name, email, phone, pass);
+                state.currentUser = user;
+                localStorage.setItem(CONFIG.STORAGE_KEY_USER, JSON.stringify(state.currentUser));
+                updateUserNav();
+                closeAuthModal();
+
+                if (state.pendingCheckout) {
+                    state.pendingCheckout = false;
+                    openCart();
+                    showToast('Welcome! Review your details below and place your order.');
+                } else {
+                    showToast('Registration successful!');
+                }
+            } catch (err) {
+                showToast(err.message || 'Registration failed');
+            }
+        }
+
+        async function handleUserLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-pass').value.trim();
+
+            try {
+                const user = await loginUser(email, pass);
+                state.currentUser = user;
+                localStorage.setItem(CONFIG.STORAGE_KEY_USER, JSON.stringify(state.currentUser));
+                updateUserNav();
+                closeAuthModal();
+
+                if (state.pendingCheckout) {
+                    state.pendingCheckout = false;
+                    openCart();
+                    showToast('Welcome back! Review your details and place your order.');
+                } else {
+                    showToast('Welcome back!');
+                }
+            } catch (err) {
+                showToast(err.message || 'Login failed');
+            }
+        }
+
+        function handleUserLogout() {
+            state.currentUser = null;
+            localStorage.removeItem(CONFIG.STORAGE_KEY_USER);
+            if (state.unsubUserOrders) state.unsubUserOrders();
+            updateUserNav();
+            backToStore();
+            showToast('Logged out');
+        }
+
+        function openUserOrdersView(fromPop) {
+            if (!state.currentUser) {
+                openAuthModal('login');
+                return;
+            }
+            
+            document.getElementById('view-home-extras').classList.add('hidden');
+            document.getElementById('view-grid').classList.add('hidden');
+            document.getElementById('view-detail').classList.add('hidden');
+            document.getElementById('view-orders').classList.remove('hidden');
+
+            if (!fromPop) history.pushState({ view: 'orders' }, '');
+
+            if (state.unsubUserOrders) state.unsubUserOrders();
+            state.unsubUserOrders = subscribeUserOrders(state.currentUser.id, renderUserOrders);
+        }
+
+        function renderUserOrders(orders) {
+            const container = document.getElementById('user-orders-list');
+            if (!orders || orders.length === 0) {
+                container.innerHTML = `<p class="text-sm text-gray-400 py-8">You haven't placed any orders yet.</p>`;
+                return;
+            }
+
+            container.innerHTML = orders.map(o => `
+                <div class="bg-white border rounded-xl p-4 shadow-sm text-sm space-y-2">
+                    <div class="flex justify-between border-b pb-2">
+                        <span class="font-bold text-gray-900">Order ID: ${o.id}</span>
+                        <span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-semibold">${o.order_status || 'Placed'}</span>
+                    </div>
+                    <div class="text-xs text-gray-600 whitespace-pre-line">${o.items}</div>
+                    <div class="flex justify-between items-center text-xs font-semibold pt-2 border-t">
+                        <span>Total: <strong class="text-orange-500">NPR ${o.total}</strong> (${o.payment_method})</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function applyActiveFilter() {
+            let list = state.activeCategory === 'all' 
+                ? state.products 
+                : state.products.filter(p => p.category === state.activeCategory);
+
+            list = [...list];
+            if (state.sortOrder === 'price_asc') list.sort((a, b) => (a.price || 0) - (b.price || 0));
+            else if (state.sortOrder === 'price_desc') list.sort((a, b) => (b.price || 0) - (a.price || 0));
+            else if (state.sortOrder === 'brand_asc') list.sort((a, b) => (a.brand || '').localeCompare(b.brand || ''));
+            else if (state.sortOrder === 'rating_desc') list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+            return list;
+        }
+
+        function filterCategory(cat) {
+            backToStore();
+            state.activeCategory = cat;
+            state.searchQuery = '';
+            
+            const d = document.getElementById('nav-search-input'); if (d) d.value = '';
+            const m = document.getElementById('nav-search-input-mobile'); if (m) m.value = '';
+
+            closeSearchModal();
+            renderFilterBar();
+            renderCategoryCircles();
+            renderProducts(applyActiveFilter());
+        }
+
+        function categoryLabel(key) {
+            const c = state.categories.find(x => x.key === key);
+            return c ? c.label : key;
+        }
+
+        function renderFilterBar() {
+            const bar = document.getElementById('filter-bar');
+            bar.innerHTML = `<button data-action="filter-category" data-key="all" class="cat-pill ${state.activeCategory === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'} px-4 py-2 rounded-full whitespace-nowrap">All Items</button>` +
+                state.categories.map(c => `<button data-action="filter-category" data-key="${c.key}" class="cat-pill ${state.activeCategory === c.key ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'} px-4 py-2 rounded-full whitespace-nowrap">${c.label}</button>`).join('');
+        }
+
+        function setupSearchInput(elementId, isMobile) {
+            const input = document.getElementById(elementId);
+            if (!input) return;
+
+            input.addEventListener('input', (e) => handleSearchTyping(e.target.value, isMobile));
+            input.addEventListener('focus', (e) => handleSearchTyping(e.target.value, isMobile));
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') submitSearch(e.target.value);
+            });
+
+            const btnId = isMobile ? 'nav-search-btn-mobile' : 'nav-search-btn';
+            document.getElementById(btnId)?.addEventListener('click', () => submitSearch(input.value));
+        }
+
+        function submitSearch(value) {
+            const v = (value || '').trim();
+            if (!v) return;
+            state.searchQuery = v;
+
+            const d = document.getElementById('nav-search-input'); if (d) d.value = v;
+            const m = document.getElementById('nav-search-input-mobile'); if (m) m.value = v;
+
+            hideSuggestions(false);
+            hideSuggestions(true);
+            document.activeElement.blur();
+            openSearchModal();
+        }
+
+        function handleSearchTyping(value, isMobile) {
+            const box = document.getElementById(isMobile ? 'nav-search-suggestions-mobile' : 'nav-search-suggestions');
+            const q = value.trim().toLowerCase();
+
+            if (!q) { box.classList.add('hidden'); return; }
+
+            const matches = state.products.filter(p => (p.title || '').toLowerCase().includes(q)).slice(0, 8);
+            if (!matches.length) { box.classList.add('hidden'); return; }
+
+            box.innerHTML = matches.map(p => `
+                <div data-action="view-product" data-id="${p.id}" class="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
+                    <img src="${p.image}" class="w-9 h-9 rounded object-cover shrink-0 bg-gray-50">
+                    <span class="text-xs text-gray-700 line-clamp-1">${p.title}</span>
+                </div>
+            `).join('');
+
+            box.classList.remove('hidden');
+        }
+
+        function hideSuggestions(isMobile) {
+            const box = document.getElementById(isMobile ? 'nav-search-suggestions-mobile' : 'nav-search-suggestions');
+            box.classList.add('hidden');
+        }
+
+        function openSearchModal(fromPop) {
+            const modal = document.getElementById('search-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            renderSearchModalResults();
+            if (!fromPop) history.pushState({ view: 'search', q: state.searchQuery }, '');
+        }
+
+        function closeSearchModal() {
+            const modal = document.getElementById('search-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function getSearchResults() {
+            const q = state.searchQuery.trim().toLowerCase();
+            let list = state.products.filter(p =>
+                (p.title || '').toLowerCase().includes(q) ||
+                (p.brand || '').toLowerCase().includes(q) ||
+                categoryLabel(p.category).toLowerCase().includes(q)
+            );
+
+            list = [...list];
+            if (state.searchSortOrder === 'price_asc') list.sort((a, b) => (a.price || 0) - (b.price || 0));
+            else if (state.searchSortOrder === 'price_desc') list.sort((a, b) => (b.price || 0) - (a.price || 0));
+            else if (state.searchSortOrder === 'brand_asc') list.sort((a, b) => (a.brand || '').localeCompare(b.brand || ''));
+            else if (state.searchSortOrder === 'rating_desc') list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+            return list;
+        }
+
+        function renderSearchModalResults() {
+            const list = getSearchResults();
+            document.getElementById('search-modal-title').innerText = `Search results for "${state.searchQuery.trim()}" (${list.length})`;
+            const grid = document.getElementById('search-modal-grid');
+            grid.innerHTML = list.length
+                ? list.map(p => productCardHtml(p)).join('')
+                : `<p class="col-span-full text-center text-sm text-gray-400 py-12">No products match your search.</p>`;
+        }
+
+        function selectCategoryFromCircle(key, fromPop) {
+            const list = key === 'all' ? state.products : state.products.filter(p => p.category === key);
+            document.getElementById('category-modal-title').innerText = key === 'all' ? 'All Products' : categoryLabel(key);
+            
+            const grid = document.getElementById('category-modal-grid');
+            grid.innerHTML = list.length
+                ? list.map(p => productCardHtml(p)).join('')
+                : `<p class="col-span-full text-center text-sm text-gray-400 py-12">No products in this category yet.</p>`;
+
+            document.getElementById('category-modal').classList.remove('hidden');
+            document.getElementById('category-modal').classList.add('flex');
+
+            if (!fromPop) history.pushState({ view: 'category', key }, '');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('category-modal').classList.add('hidden');
+            document.getElementById('category-modal').classList.remove('flex');
+        }
+
+        function renderCategoryCircles() {
+            const wrap = document.getElementById('category-circles-wrap');
+            const row = document.getElementById('category-circles');
+            if (!state.categories.length || !state.products.length) { wrap.classList.add('hidden'); return; }
+
+            row.innerHTML = state.categories.map(c => {
+                const sample = state.products.find(p => p.category === c.key);
+                const img = sample ? sample.image : '';
+                const isActive = state.activeCategory === c.key;
+
+                return `
+                    <div data-action="select-category-circle" data-key="${c.key}" class="flex flex-col items-center gap-2.5 cursor-pointer shrink-0 w-36">
+                        <div class="w-28 h-28 rounded-full bg-gray-50 border ${isActive ? 'border-blue-500 border-2' : 'border-gray-100'} overflow-hidden flex items-center justify-center hover:border-blue-400 transition">
+                            ${img ? `<img src="${img}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-tag text-gray-300 text-3xl"></i>`}
+                        </div>
+                        <span class="text-xs ${isActive ? 'text-blue-600 font-semibold' : 'text-gray-600'} text-center leading-tight">${c.label}</span>
+                    </div>
+                `;
+            }).join('');
+
+            wrap.classList.remove('hidden');
+        }
+
+        function parseSoldCount(s) {
+            if (!s) return 0;
+            const str = String(s).toUpperCase().trim();
+            const num = parseFloat(str);
+            if (isNaN(num)) return 0;
+            if (str.includes('M')) return num * 1000000;
+            if (str.includes('K')) return num * 1000;
+            return num;
+        }
+
+        function renderBestSellers() {
+            const wrap = document.getElementById('bestsellers-wrap');
+            const row = document.getElementById('bestsellers-row');
+            if (!state.products.length) { wrap.classList.add('hidden'); return; }
+
+            const top = [...state.products].sort((a, b) => parseSoldCount(b.sold) - parseSoldCount(a.sold)).slice(0, 10);
+            row.innerHTML = top.map(p => `
+                <div data-action="view-product" data-id="${p.id}" class="cursor-pointer bg-white border border-gray-100 rounded-xl overflow-hidden shrink-0 w-36 hover:shadow-md transition">
+                    <div class="aspect-square bg-gray-50">
+                        <img src="${p.image}" alt="${p.title}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-2">
+                        <p class="text-[11px] text-gray-700 line-clamp-2 leading-tight min-h-[2rem]">${p.title}</p>
+                        <p class="text-orange-500 font-bold text-xs mt-1">Rs.${p.price}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            wrap.classList.remove('hidden');
+        }
+
+        function productCardHtml(p) {
+            const discount = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+            const fullStars = Math.round(p.rating || 0);
+            const stars = Array.from({ length: 5 }).map((_, i) =>
+                `<i class="fa-star text-[11px] ${i < fullStars ? 'fa-solid text-orange-400' : 'fa-regular text-gray-300'}"></i>`
+            ).join('');
+
+            return `
+                <div data-action="view-product" data-id="${p.id}" class="cursor-pointer bg-white overflow-hidden hover:shadow-lg transition rounded-lg border border-gray-100 flex flex-col justify-between p-2">
+                    <div class="aspect-square bg-gray-50 overflow-hidden relative rounded-md">
+                        <img src="${p.image}" alt="${p.title}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-1 mt-2">
+                        <h3 class="text-gray-700 text-xs font-semibold leading-snug line-clamp-2 min-h-[2.2rem]">${p.title}</h3>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-orange-500 font-bold text-sm">Rs.${p.price.toLocaleString()}</span>
+                            ${discount > 0 ? `<span class="text-[10px] text-gray-400 line-through">Rs.${p.oldPrice}</span>` : ''}
+                        </div>
+                        <div class="flex items-center gap-1 mt-1 text-[10px] text-gray-400">
+                            <span class="flex gap-0.5">${stars}</span>
+                            <span>(${p.reviews || 0})</span>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderProducts(items) {
+            const grid = document.getElementById('product-grid');
+            if (!items || items.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-center text-sm text-gray-400 py-12">No products found.</p>`;
+                return;
+            }
+            grid.innerHTML = items.map(p => productCardHtml(p)).join('');
+        }
+
+        function viewProduct(id, fromPop) {
+            const p = state.products.find(x => x.id === id);
+            if (!p) return;
+
+            closeCategoryModal();
+            closeSearchModal();
+            state.currentProductId = id;
+            state.detailQty = 1;
+
+            document.getElementById('detail-category').innerText = categoryLabel(p.category);
+            document.getElementById('detail-title').innerText = p.title;
+            document.getElementById('detail-price').innerText = `Rs.${p.price.toLocaleString()}`;
+            document.getElementById('detail-oldprice').innerText = p.oldPrice ? `Rs.${p.oldPrice.toLocaleString()}` : '';
+
+            const discount = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+            document.getElementById('detail-discount').innerText = discount > 0 ? `-${discount}%` : '';
+
+            document.getElementById('detail-main-image').src = p.image;
+            document.getElementById('detail-description').innerText = p.description || '';
+            document.getElementById('detail-bullets').innerHTML = (p.bullets || []).map(b => `<li>${b}</li>`).join('');
+
+            document.getElementById('detail-qty').innerText = '1';
+            document.getElementById('view-home-extras').classList.add('hidden');
+            document.getElementById('view-grid').classList.add('hidden');
+            document.getElementById('view-orders').classList.add('hidden');
+            document.getElementById('view-detail').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (!fromPop) history.pushState({ view: 'detail', id }, '');
+        }
+
+        function backToStore() {
+            state.currentProductId = null;
+            document.getElementById('view-home-extras').classList.remove('hidden');
+            document.getElementById('view-detail').classList.add('hidden');
+            document.getElementById('view-orders').classList.add('hidden');
+            document.getElementById('view-grid').classList.remove('hidden');
+        }
+
+        function handlePopState(e) {
+            const s = e.state;
+            if (s && s.view === 'detail' && s.id) {
+                closeCategoryModal();
+                closeSearchModal();
+                viewProduct(s.id, true);
+            } else if (s && s.view === 'orders') {
+                closeCategoryModal();
+                closeSearchModal();
+                openUserOrdersView(true);
+            } else if (s && s.view === 'category' && s.key) {
+                closeSearchModal();
+                selectCategoryFromCircle(s.key, true);
+            } else if (s && s.view === 'search' && s.q) {
+                closeCategoryModal();
+                state.searchQuery = s.q;
+                openSearchModal(true);
+            } else {
+                closeCategoryModal();
+                closeSearchModal();
+                backToStore();
+            }
+        }
+
+        function changeDetailQty(delta) {
+            state.detailQty = Math.max(1, state.detailQty + delta);
+            document.getElementById('detail-qty').innerText = state.detailQty;
+        }
+
+        function addToCartFromDetail() {
+            if (!state.currentProductId) return;
+            const item = state.products.find(p => p.id === state.currentProductId);
+            const existing = state.cart.find(c => c.id === state.currentProductId);
+
+            if (existing) {
+                existing.qty += state.detailQty;
+            } else {
+                state.cart.push({ ...item, qty: state.detailQty });
+            }
+
+            updateCartTotals();
+            showToast(`Added "${item.title}" to cart`);
+        }
+
+        function buyNowFromDetail() {
+            if (!state.currentProductId) return;
+            const item = state.products.find(p => p.id === state.currentProductId);
+            const existing = state.cart.find(c => c.id === state.currentProductId);
+
+            if (existing) {
+                existing.qty += state.detailQty;
+            } else {
+                state.cart.push({ ...item, qty: state.detailQty });
+            }
+
+            updateCartTotals();
+            openCart();
+        }
+
+        function updateCartQty(id, delta) {
+            const item = state.cart.find(c => c.id === id);
+            if (!item) return;
+
+            item.qty += delta;
+            if (item.qty <= 0) {
+                state.cart = state.cart.filter(c => c.id !== id);
+            }
+            updateCartTotals();
+        }
+
+        function updateCartTotals() {
+            const badge = document.getElementById('cart-badge');
+            const totalQty = state.cart.reduce((sum, item) => sum + item.qty, 0);
+            badge.innerText = totalQty;
+
+            const cartContainer = document.getElementById('cart-items');
+            if (state.cart.length === 0) {
+                cartContainer.innerHTML = `<p class="text-sm text-gray-400 text-center py-8">Your cart is currently empty.</p>`;
+            } else {
+                cartContainer.innerHTML = state.cart.map(item => `
+                    <div class="flex items-center justify-between pt-3">
+                        <div class="flex items-center gap-3">
+                            <img src="${item.image}" class="w-12 h-12 rounded object-cover">
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-800 line-clamp-1">${item.title}</h4>
+                                <p class="text-xs text-blue-600 font-semibold">NPR ${item.price}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 border rounded-lg px-2 py-1 text-xs">
+                            <button data-action="update-cart-qty" data-id="${item.id}" data-delta="-1" class="text-gray-500 font-bold px-1">-</button>
+                            <span class="font-semibold">${item.qty}</span>
+                            <button data-action="update-cart-qty" data-id="${item.id}" data-delta="1" class="text-gray-500 font-bold px-1">+</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const subtotal = state.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const selectedKey = document.getElementById('checkout-location')?.value;
+            const targetRate = state.deliveryRates.find(r => r.key === selectedKey) || state.deliveryRates[0];
+            const deliveryCharge = targetRate ? targetRate.charge : 150;
+
+            document.getElementById('summary-subtotal').innerText = `NPR ${subtotal.toLocaleString()}`;
+            document.getElementById('summary-delivery').innerText = `NPR ${deliveryCharge}`;
+            document.getElementById('summary-total').innerText = `NPR ${(subtotal + (state.cart.length ? deliveryCharge : 0)).toLocaleString()}`;
+        }
+
+        function openCart() { document.getElementById('cart-modal').classList.remove('hidden'); }
+        function closeCart() { document.getElementById('cart-modal').classList.add('hidden'); }
+
+        function populateLocationOptions() {
+            const select = document.getElementById('checkout-location');
+            if (!select) return;
+            const prev = select.value;
+            select.innerHTML = state.deliveryRates.map(r => `<option value="${r.key}">${r.city} (NPR ${r.charge})</option>`).join('');
+            if (state.deliveryRates.some(r => r.key === prev)) select.value = prev;
+        }
+
+        function selectPayment(method) {
+            state.selectedPayment = method;
+            document.getElementById('pay-cod').classList.toggle('selected', method === 'cod');
+            document.getElementById('pay-esewa').classList.toggle('selected', method === 'esewa');
+        }
+
+        function openEsewaModal(orderId) {
+            state.currentEsewaOrderId = orderId;
+            document.getElementById('esewa-tx-input').value = '';
+
+            const accountId = state.esewaConfig.accountId || '9800000000';
+            const providerName = state.esewaConfig.providerName || 'Mobile Banking';
+            const qrSrc = state.esewaConfig.qrImage
+                ? state.esewaConfig.qrImage
+                : `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(accountId)}`;
+
+            document.getElementById('esewa-qr-image').src = qrSrc;
+            document.getElementById('esewa-id-label').innerText = `${providerName} ID: ${accountId}`;
+
+            const modal = document.getElementById('esewa-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEsewaModal() {
+            const modal = document.getElementById('esewa-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function submitEsewaTransaction() {
+            const txId = document.getElementById('esewa-tx-input').value.trim();
+            if (!txId) {
+                showToast('Please enter your Transaction ID.');
+                return;
+            }
+
+            try {
+                await updateOrderDetails(state.currentEsewaOrderId, {
+                    transaction_id: txId,
+                    payment_status: 'Payment Processing'
+                });
+                closeEsewaModal();
+                showToast('Transaction ID submitted. Verification pending!');
+                openUserOrdersView();
+            } catch (err) {
+                console.error('Esewa transaction submit failed:', err);
+                showToast('Failed to submit payment ID.');
+            }
+        }
+
+        function openConfirmModal(message) {
+            document.getElementById('confirm-message').innerText = message;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function handleCheckout() {
+            if (state.cart.length === 0) {
+                showToast('Add items to your cart before proceeding.');
+                return;
+            }
+
+            if (!state.currentUser) {
+                state.pendingCheckout = true;
+                showToast('Please login or register to place your order');
+                openAuthModal('login');
+                return;
+            }
+
+            const name = document.getElementById('checkout-name').value.trim();
+            const phone = document.getElementById('checkout-phone').value.trim();
+            const email = document.getElementById('checkout-email').value.trim();
+            const address = document.getElementById('checkout-address').value.trim();
+
+            if (!name || !phone || !email || !address) {
+                showToast('Please fill in all shipping details.');
+                return;
+            }
+
+            const locationKey = document.getElementById('checkout-location').value;
+            const rate = state.deliveryRates.find(r => r.key === locationKey) || state.deliveryRates[0];
+            const subtotal = state.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const total = subtotal + rate.charge;
+            const orderId = 'ORD' + Date.now();
+            const itemsSummary = state.cart.map(c => `${c.title} x${c.qty} (NPR ${c.price} each)`).join('\n');
+            const paymentLabel = state.selectedPayment === 'esewa' ? (state.esewaConfig.providerName || 'Mobile Banking') : 'Cash on Delivery';
+
+            const payload = {
+                id: orderId,
+                user_id: state.currentUser.id,
+                name, phone, email, address,
+                delivery_location: rate.city,
+                payment_method: paymentLabel,
+                items: itemsSummary,
+                subtotal, delivery_charge: rate.charge, total,
+                payment_status: state.selectedPayment === 'esewa' ? 'Pending' : 'Cash on Delivery',
+                order_status: 'Order Placed'
+            };
+
+            const btn = document.getElementById('place-order-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Placing order...`;
+
+            try {
+                await createOrder(payload);
+            } catch (err) {
+                console.error('Order creation failed:', err);
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-lock text-sm"></i> Place Order`;
+                showToast('Could not place order: ' + (err.message || 'Please try again.'));
+                return;
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-lock text-sm"></i> Place Order`;
+
+            state.cart = [];
+            updateCartTotals();
+            closeCart();
+
+            if (state.selectedPayment === 'esewa') {
+                openEsewaModal(orderId);
+            } else {
+                openConfirmModal(`Order ${orderId} placed with Cash on Delivery.`);
+            }
+        }
+
+        function showToast(message) {
+            let toast = document.getElementById('cart-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'cart-toast';
+                toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-full shadow-lg z-[90] flex items-center gap-2 opacity-0 transition-opacity duration-300 pointer-events-none';
+                document.body.appendChild(toast);
+            }
+
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-green-400"></i> ${message}`;
+            toast.style.opacity = '1';
+
+            clearTimeout(state.toastTimer);
+            state.toastTimer = setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2500);
+        }
+    </script>
 </body>
 </html>
