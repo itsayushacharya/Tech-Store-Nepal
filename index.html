@@ -1,0 +1,425 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechStore Nepal | Electronics & Accessories</title>
+    
+    <!-- Third-Party Assets -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="icon" type="image/x-icon" href="https://play-lh.googleusercontent.com/R-m4sTm-WbWdq1OsVpAAQMVl7DpzN3ssF1MpxslpGS5-PmfO6LyeCWDBPUqijXdiHZrYVo4rNKBdu--lOEAMe-I=w240-h480-rw">
+    
+    <!-- Custom Application Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="shared.js?v=5" defer></script>
+    <script src="app.js" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <!-- NAVBAR -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-[1800px] mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
+            <div id="nav-brand" class="flex items-center gap-2 cursor-pointer" data-action="filter-category" data-key="all">
+                <i class="fa-solid fa-bolt text-blue-600 text-2xl"></i>
+                <span class="text-xl font-bold tracking-tight text-gray-900">TechStore<span class="text-blue-600">NP</span></span>
+            </div>
+
+            <!-- Desktop Search -->
+            <div class="hidden md:flex flex-1 max-w-md mx-6">
+                <div class="relative w-full">
+                    <input id="nav-search-input" type="text" placeholder="Search products..." autocomplete="off"
+                        class="w-full border border-gray-200 bg-gray-50 rounded-full pl-10 pr-11 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <button id="nav-search-btn" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                    <div id="nav-search-suggestions" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50"></div>
+                </div>
+            </div>
+
+            <!-- Navigation Actions -->
+            <div class="flex items-center gap-4">
+                <div id="user-nav-area">
+                    <button data-action="open-auth" data-view="login" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-md font-semibold">
+                        <i class="fa-solid fa-user mr-1"></i> Login / Register
+                    </button>
+                </div>
+                <div id="cart-nav-trigger" class="relative cursor-pointer" data-action="open-cart">
+                    <i class="fa-solid fa-cart-shopping text-xl text-gray-700"></i>
+                    <span id="cart-badge" class="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Search -->
+        <div class="md:hidden px-4 pb-3">
+            <div class="relative w-full">
+                <input id="nav-search-input-mobile" type="text" placeholder="Search products..." autocomplete="off"
+                    class="w-full border border-gray-200 bg-gray-50 rounded-full pl-10 pr-11 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <button id="nav-search-btn-mobile" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+                <div id="nav-search-suggestions-mobile" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- LOADING STATE BANNER -->
+    <div id="loading-banner" class="bg-amber-50 border-b border-amber-200 text-amber-800 text-xs text-center py-2 px-4">
+        <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Connecting...
+    </div>
+
+    <!-- MAIN CONTENT VIEW -->
+    <main class="max-w-[1800px] mx-auto px-4 md:px-8 py-8">
+        <div id="view-home-extras">
+            <div id="home-hero-block">
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl px-8 py-5 mb-8 text-white shadow-lg flex flex-col md:flex-row items-center justify-between">
+                    <div class="space-y-2 max-w-lg">
+                        <span class="bg-blue-500 text-xs px-3 py-1 rounded-full uppercase tracking-wider font-semibold">Nepal Express Delivery</span>
+                        <h1 class="text-xl md:text-2xl font-extrabold leading-tight">Next-Gen Tech Gear Delivered Anywhere in Nepal</h1>
+                        <p class="text-blue-100 text-sm">Smartwatches, Earbuds, and Power Banks with province-wide delivery.</p>
+                    </div>
+                    <div class="mt-4 md:mt-0">
+                        <div class="bg-white/10 backdrop-blur-md px-5 py-3 rounded-xl border border-white/20 text-center flex items-center gap-3">
+                            <i class="fa-solid fa-truck-fast text-2xl"></i>
+                            <p class="text-xs text-blue-100 text-left">Biratnagar: NPR 0<br>Other Cities: NPR 100-150</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TRUST STRIP -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                    <div class="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3">
+                        <i class="fa-solid fa-shield-halved text-blue-600 text-xl w-6 text-center"></i>
+                        <div>
+                            <p class="text-xs font-bold text-gray-800 leading-tight">1 Year</p>
+                            <p class="text-[11px] text-gray-500 leading-tight">Warranty</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3">
+                        <i class="fa-solid fa-rotate-left text-orange-500 text-xl w-6 text-center"></i>
+                        <div>
+                            <p class="text-xs font-bold text-gray-800 leading-tight">7 Day</p>
+                            <p class="text-[11px] text-gray-500 leading-tight">Replacement</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3">
+                        <i class="fa-solid fa-truck-fast text-green-600 text-xl w-6 text-center"></i>
+                        <div>
+                            <p class="text-xs font-bold text-gray-800 leading-tight">Express</p>
+                            <p class="text-[11px] text-gray-500 leading-tight">Delivery</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3">
+                        <i class="fa-solid fa-circle-check text-blue-600 text-xl w-6 text-center"></i>
+                        <div>
+                            <p class="text-xs font-bold text-gray-800 leading-tight">Trusted</p>
+                            <p class="text-[11px] text-gray-500 leading-tight">Brands</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CATEGORIES -->
+                <div id="category-circles-wrap" class="mb-8 hidden">
+                    <h2 class="text-lg font-bold text-gray-900 mb-3">Shop by Categories</h2>
+                    <div id="category-circles" class="flex overflow-x-auto gap-5 pb-2 no-scrollbar"></div>
+                </div>
+
+                <!-- BEST SELLERS -->
+                <div id="bestsellers-wrap" class="mb-10 hidden">
+                    <h2 class="text-lg font-bold text-gray-900 mb-3">Our Best Sellers</h2>
+                    <div id="bestsellers-row" class="flex overflow-x-auto gap-4 pb-2 no-scrollbar"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3">
+                <div id="filter-bar" class="flex overflow-x-auto gap-2 pb-3 text-sm font-medium no-scrollbar flex-1"></div>
+                <div class="pb-3 shrink-0 self-end sm:self-auto">
+                    <select id="sort-select" class="text-xs sm:text-sm border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none font-medium text-gray-700">
+                        <option value="best">Sort: Best Match</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                        <option value="brand_asc">Brand: A to Z</option>
+                        <option value="rating_desc">Rating: High to Low</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCT GRID -->
+        <div id="view-grid">
+            <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+        </div>
+
+        <!-- PRODUCT DETAIL VIEW -->
+        <div id="view-detail" class="hidden">
+            <button data-action="go-back" class="text-sm text-gray-500 hover:text-blue-600 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back to products
+            </button>
+
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="bg-white border border-gray-100 rounded-xl p-4">
+                        <div class="h-[420px] md:h-[560px] rounded-lg overflow-hidden bg-gray-50">
+                            <img id="detail-main-image" src="" alt="" class="w-full h-full object-contain p-4">
+                        </div>
+                        <div id="detail-thumbnails" class="flex gap-2 mt-3"></div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div class="bg-white border border-gray-100 rounded-xl p-6">
+                        <span id="detail-category" class="text-[10px] uppercase font-semibold tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded"></span>
+                        <h1 id="detail-title" class="text-xl font-bold text-gray-900 mt-3 mb-2"></h1>
+                        <div id="detail-rating" class="flex items-center gap-1 mb-3"></div>
+                        <div class="flex items-baseline gap-3 mb-4">
+                            <span id="detail-price" class="text-2xl font-extrabold text-orange-500"></span>
+                            <span id="detail-oldprice" class="text-sm text-gray-400 line-through"></span>
+                            <span id="detail-discount" class="text-xs font-semibold text-green-600"></span>
+                        </div>
+
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="text-xs font-semibold text-gray-600">Quantity</span>
+                            <div class="flex items-center gap-2 border rounded-lg px-2 py-1">
+                                <button data-action="change-detail-qty" data-delta="-1" class="text-gray-500 font-bold px-2">-</button>
+                                <span id="detail-qty" class="font-semibold w-6 text-center">1</span>
+                                <button data-action="change-detail-qty" data-delta="1" class="text-gray-500 font-bold px-2">+</button>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button data-action="add-cart-detail" class="flex-1 bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold py-3 rounded-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-cart-plus"></i> Add to Cart
+                            </button>
+                            <button data-action="buy-now-detail" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-3 rounded-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> Buy Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-white border border-gray-100 rounded-xl p-5 space-y-4 text-xs">
+                        <div>
+                            <p class="font-bold text-gray-800 mb-1"><i class="fa-solid fa-truck text-blue-600 mr-1"></i> Delivery</p>
+                            <p class="text-gray-500">Nepal-wide delivery, NPR 100–150 depending on destination.</p>
+                        </div>
+                        <div class="border-t pt-3">
+                            <p class="font-bold text-gray-800 mb-1"><i class="fa-solid fa-money-bill-wave text-green-600 mr-1"></i> Payment</p>
+                            <p class="text-gray-500">Cash on Delivery or Mobile Banking QR available at checkout.</p>
+                        </div>
+                        <div class="border-t pt-3">
+                            <p class="font-bold text-gray-800 mb-1"><i class="fa-solid fa-shield-halved text-blue-600 mr-1"></i> Warranty</p>
+                            <p class="text-gray-500">Genuine product, standard seller warranty applies.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-gray-100 rounded-xl p-6 mt-8">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Description</h2>
+                <p id="detail-description" class="text-sm text-gray-600 mb-4"></p>
+                <ul id="detail-bullets" class="space-y-2 text-sm text-gray-700"></ul>
+                <div class="mt-6 rounded-lg overflow-hidden bg-gray-100">
+                    <img id="detail-banner-image" src="" alt="" class="w-full max-h-96 object-cover">
+                </div>
+            </div>
+        </div>
+
+        <!-- USER ORDERS VIEW -->
+        <div id="view-orders" class="hidden">
+            <button data-action="go-back" class="text-sm text-gray-500 hover:text-blue-600 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back to store
+            </button>
+            <h1 class="text-2xl font-bold mb-6">My Orders</h1>
+            <div id="user-orders-list" class="space-y-4"></div>
+        </div>
+    </main>
+
+    <!-- AUTH MODAL -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/50 hidden z-[60] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button data-action="close-auth" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+
+            <!-- Login -->
+            <div id="auth-login-view">
+                <h2 class="text-xl font-bold text-gray-900 mb-1">Welcome Back</h2>
+                <p class="text-xs text-gray-500 mb-4">Sign in to track orders and shop seamlessly.</p>
+                <form id="form-login" class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Email Address</label>
+                        <input type="email" id="login-email" required placeholder="you@example.com" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Password</label>
+                        <input type="password" id="login-pass" required placeholder="••••••••" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm">Login</button>
+                </form>
+                <p class="text-xs text-gray-500 mt-4 text-center">Don't have an account? <button data-action="toggle-auth" data-view="register" class="text-blue-600 font-semibold hover:underline">Register</button></p>
+            </div>
+
+            <!-- Register -->
+            <div id="auth-register-view" class="hidden">
+                <h2 class="text-xl font-bold text-gray-900 mb-1">Create Account</h2>
+                <p class="text-xs text-gray-500 mb-4">Register to easily manage orders in one place.</p>
+                <form id="form-register" class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Full Name</label>
+                        <input type="text" id="reg-name" required placeholder="Ayush Acharya" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Phone Number</label>
+                        <input type="tel" id="reg-phone" required placeholder="98XXXXXXXX" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Email Address</label>
+                        <input type="email" id="reg-email" required placeholder="you@example.com" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Password</label>
+                        <input type="password" id="reg-pass" required placeholder="••••••••" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm">Create Account</button>
+                </form>
+                <p class="text-xs text-gray-500 mt-4 text-center">Already have an account? <button data-action="toggle-auth" data-view="login" class="text-blue-600 font-semibold hover:underline">Login</button></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CART SLIDE-OVER -->
+    <div id="cart-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex justify-end">
+        <div class="bg-white w-full max-w-md h-full flex flex-col justify-between p-6 shadow-2xl overflow-y-auto">
+            <div>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-bag-shopping text-blue-600"></i> Your Shopping Cart</h2>
+                    <button data-action="close-cart" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div id="cart-items" class="space-y-4 divide-y"></div>
+            </div>
+
+            <div class="border-t pt-4 mt-6 space-y-4">
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Full Name</label>
+                        <input type="text" id="checkout-name" placeholder="Your full name" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Phone Number</label>
+                        <input type="tel" id="checkout-phone" placeholder="98XXXXXXXX" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Email Address</label>
+                        <input type="email" id="checkout-email" placeholder="you@example.com" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Delivery Address</label>
+                        <input type="text" id="checkout-address" placeholder="Street, ward, landmark" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-1">Delivery Destination (Nepal)</label>
+                        <select id="checkout-location" class="w-full border rounded-lg p-2.5 text-sm outline-none"></select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 block mb-2">Payment Method</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="pay-cod" data-action="select-payment" data-method="cod" class="pay-option cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-2 text-center">
+                                <i class="fa-solid fa-money-bill-wave text-2xl text-green-600"></i>
+                                <span class="text-xs font-semibold">Cash on Delivery</span>
+                            </div>
+                            <div id="pay-esewa" data-action="select-payment" data-method="esewa" class="pay-option cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-2 text-center">
+                                <i class="fa-solid fa-qrcode text-2xl text-green-600"></i>
+                                <span id="pay-esewa-label" class="text-xs font-semibold">Scan & Pay</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1 text-sm">
+                    <div class="flex justify-between text-gray-500"><span>Subtotal</span><span id="summary-subtotal">NPR 0</span></div>
+                    <div class="flex justify-between text-gray-500"><span>Delivery Charge</span><span id="summary-delivery">NPR 0</span></div>
+                    <div class="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t"><span>Total</span><span id="summary-total">NPR 0</span></div>
+                </div>
+
+                <button id="place-order-btn" data-action="submit-checkout" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-lock text-sm"></i> Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ESEWA QR MODAL -->
+    <div id="esewa-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative text-center space-y-4">
+            <button data-action="close-esewa" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h2 class="text-lg font-bold text-gray-900">Scan & Pay</h2>
+            <p class="text-xs text-gray-500">Scan the QR code below using your banking or wallet app to complete your payment.</p>
+
+            <div class="bg-gray-100 p-4 rounded-xl inline-block border">
+                <img id="esewa-qr-image" src="" alt="Payment QR Code" class="w-44 h-44 mx-auto rounded">
+                <p id="esewa-id-label" class="text-[11px] text-gray-500 mt-2 font-semibold"></p>
+            </div>
+
+            <div>
+                <label class="text-xs font-semibold text-gray-600 block mb-1 text-left">Transaction / Reference ID</label>
+                <input type="text" id="esewa-tx-input" placeholder="e.g. 8X39A20F" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+            </div>
+
+            <button data-action="submit-esewa" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg text-sm">Submit Payment ID</button>
+        </div>
+    </div>
+
+    <!-- SEARCH RESULTS MODAL -->
+    <div id="search-modal" class="fixed inset-0 bg-white hidden flex-col z-[75]">
+        <div class="border-b shrink-0">
+            <div class="max-w-[1800px] mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button data-action="go-back" class="text-gray-400 hover:text-gray-700 text-xl shrink-0"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h2 id="search-modal-title" class="text-base md:text-lg font-bold text-gray-900 truncate"></h2>
+                </div>
+                <select id="search-sort-select" class="text-xs sm:text-sm border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none font-medium text-gray-700 shrink-0">
+                    <option value="best">Sort: Best Match</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="brand_asc">Brand: A to Z</option>
+                    <option value="rating_desc">Rating: High to Low</option>
+                </select>
+            </div>
+        </div>
+        <div id="search-modal-grid" class="flex-1 overflow-y-auto max-w-[1800px] mx-auto w-full px-4 md:px-8 py-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+    </div>
+
+    <!-- CATEGORY MODAL -->
+    <div id="category-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[70] p-3 md:p-6 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-[1400px] h-[92vh] md:h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between p-5 border-b shrink-0">
+                <h2 id="category-modal-title" class="text-xl font-bold text-gray-900"></h2>
+                <button data-action="go-back" class="text-gray-400 hover:text-gray-700 text-2xl px-2"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="category-modal-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-5 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- ORDER CONFIRMATION MODAL -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative text-center">
+            <div class="mx-auto mb-4 h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
+                <i class="fa-solid fa-circle-check text-3xl text-green-600"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Order Placed!</h2>
+            <p id="confirm-message" class="text-sm text-gray-600 mb-6"></p>
+            <div class="flex gap-3">
+                <button data-action="close-confirm" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm">Got it</button>
+                <button data-action="confirm-track-order" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm">Track Order</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
