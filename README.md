@@ -40,10 +40,6 @@ The project focuses on localized features such as Nepalese Rupee (NPR) currency 
 
 Follow these instructions to get a local copy up and running.
 
-### Prerequisites
-* [Node.js](https://nodejs.org/) (v18+)
-* [Git](https://git-scm.com/)
-* Database setup (MongoDB / PostgreSQL)
 
 ### Installation
 
