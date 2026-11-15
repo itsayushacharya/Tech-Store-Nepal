@@ -53,19 +53,58 @@
         <div id="sync-status" class="text-xs text-gray-400 mb-4"></div>
 
         <div class="flex gap-2 mb-6 border-b text-sm font-semibold overflow-x-auto">
-            <button id="tab-orders" onclick="switchTab('orders')" class="px-4 py-2 active-tab">Customer Orders</button>
+            <button id="tab-overview" onclick="switchTab('overview')" class="px-4 py-2 active-tab">Overview</button>
+            <button id="tab-orders" onclick="switchTab('orders')" class="px-4 py-2 text-gray-500">Customer Orders</button>
             <button id="tab-products" onclick="switchTab('products')" class="px-4 py-2 text-gray-500">Products</button>
             <button id="tab-reviews" onclick="switchTab('reviews')" class="px-4 py-2 text-gray-500">Reviews</button>
+            <button id="tab-customers" onclick="switchTab('customers')" class="px-4 py-2 text-gray-500">Customers</button>
             <button id="tab-categories" onclick="switchTab('categories')" class="px-4 py-2 text-gray-500">Categories</button>
             <button id="tab-delivery" onclick="switchTab('delivery')" class="px-4 py-2 text-gray-500">Delivery Rates</button>
             <button id="tab-esewa" onclick="switchTab('esewa')" class="px-4 py-2 text-gray-500">Payment QR</button>
             <button id="tab-account" onclick="switchTab('account')" class="px-4 py-2 text-gray-500">Admin Account</button>
         </div>
 
+        <!-- OVERVIEW PANEL -->
+        <div id="panel-overview" class="space-y-6">
+            <div id="ov-cards" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-5 rounded-xl border border-gray-100 lg:col-span-2">
+                    <h3 class="font-bold mb-4">Revenue · last 7 days</h3><div id="ov-week" class="flex items-end gap-3 h-44"></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100">
+                    <h3 class="font-bold mb-4">Orders by status</h3><div id="ov-status" class="space-y-2.5"></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100">
+                    <h3 class="font-bold mb-4">Top selling products</h3><div id="ov-top" class="space-y-3"></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100 lg:col-span-2">
+                    <div class="flex justify-between mb-3"><h3 class="font-bold">Recent orders</h3><button onclick="switchTab('orders')" class="text-xs text-blue-600 font-semibold">View all</button></div>
+                    <div id="ov-recent" class="divide-y text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CUSTOMERS PANEL -->
+        <div id="panel-customers" class="hidden">
+            <div class="bg-white p-6 rounded-xl border border-gray-100">
+                <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold"><i class="fa-solid fa-users text-blue-600 mr-2"></i>Customers</h2><span id="cust-count" class="text-xs text-gray-400"></span></div>
+                <div class="overflow-x-auto"><table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-500 text-xs"><tr><th class="p-3">Name</th><th class="p-3">Email</th><th class="p-3">Phone</th><th class="p-3">Orders</th><th class="p-3">Total spent</th></tr></thead>
+                    <tbody id="cust-table" class="divide-y"></tbody></table></div>
+            </div>
+        </div>
+
         <!-- ORDERS PANEL -->
         <div id="panel-orders">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-boxes-packing text-blue-600"></i> Customer Orders & Tracking</h2>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <input id="ord-search" oninput="renderAdminOrders()" placeholder="Search order ID, name, phone, email…" class="flex-1 min-w-[200px] border rounded-lg p-2.5 text-sm outline-none">
+                    <select id="ord-filter" onchange="renderAdminOrders()" class="border rounded-lg p-2.5 text-sm outline-none">
+                        <option value="">All orders</option><option value="verify">Payment to verify</option><option value="open">Not delivered yet</option><option value="Delivered">Delivered</option>
+                    </select>
+                    <button onclick="exportOrdersCsv()" class="bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold px-4 rounded-lg"><i class="fa-solid fa-download mr-1"></i>Export CSV</button>
+                </div>
                 <div id="admin-orders-list" class="space-y-4"></div>
             </div>
         </div>
@@ -275,15 +314,16 @@
         async function initDashboard() {
             document.getElementById('sync-status').innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Connecting to database...`;
             await ensureSeeded();
-            switchTab('orders');
+            switchTab('overview');
+            db.from('users_app').select('*').then(({ data }) => { customers = data || []; renderCustomers(); renderOverview(); });
 
             unsubOrders = subscribeAllOrders(list => {
                 orders = list;
-                renderAdminOrders();
+                renderAdminOrders(); renderOverview(); renderCustomers();
             });
             unsubProducts = subscribeProducts(list => {
                 products = list;
-                renderAdminProducts();
+                renderAdminProducts(); renderOverview();
                 renderCategoryList();
                 document.getElementById('sync-status').innerHTML = `<i class="fa-solid fa-circle-check text-green-500 mr-1"></i> Synced with store database.`;
             });
@@ -296,7 +336,7 @@
                 deliveryRates = list;
                 renderAdminDeliveryRates();
             });
-            unsubReviews = subscribeReviews(list => { reviews = list; renderAdminReviews(); });
+            unsubReviews = subscribeReviews(list => { reviews = list; renderAdminReviews(); renderOverview(); });
             unsubEsewa = subscribePaymentQRConfig(config => {
                 esewaConfig = config;
                 renderEsewaSettings();
@@ -350,6 +390,72 @@
             catch (err) { alert('Could not delete review: ' + (err.message || '')); }
         }
 
+
+        /* ---------- Overview, customers, export ---------- */
+        const fmt = n => 'NPR ' + Math.round(n || 0).toLocaleString();
+        let customers = [];
+        function filteredOrders() {
+            const q = (document.getElementById('ord-search')?.value || '').toLowerCase().trim();
+            const f = document.getElementById('ord-filter')?.value || '';
+            return orders.filter(o =>
+                (!q || [o.id, o.name, o.phone, o.email].some(v => String(v || '').toLowerCase().includes(q))) &&
+                (!f || (f === 'verify' ? o.payment_status === 'Payment Processing' : f === 'open' ? o.order_status !== 'Delivered' : o.order_status === f)));
+        }
+        function renderOverview() {
+            const box = document.getElementById('ov-cards'); if (!box) return;
+            const ok = orders.filter(o => o.payment_status !== 'Failed');
+            const rev = ok.reduce((t, o) => t + (+o.total || 0), 0);
+            const avgR = reviews.length ? (reviews.reduce((t, r) => t + r.rating, 0) / reviews.length).toFixed(1) : '–';
+            const cards = [
+                ['Revenue', fmt(rev), 'fa-coins', 'blue'], ['Orders', orders.length, 'fa-box', 'indigo'],
+                ['Open orders', orders.filter(o => o.order_status !== 'Delivered').length, 'fa-truck-fast', 'amber'],
+                ['Payments to verify', orders.filter(o => o.payment_status === 'Payment Processing').length, 'fa-circle-exclamation', 'red'],
+                ['Avg order', fmt(ok.length ? rev / ok.length : 0), 'fa-receipt', 'green'],
+                ['Customers', customers.length, 'fa-users', 'purple'], ['Avg review', avgR, 'fa-star', 'amber']];
+            box.innerHTML = cards.map(([l, v, i, c]) => `<div class="bg-white border border-gray-100 rounded-xl p-4">
+                <span class="w-9 h-9 rounded-lg bg-${c}-50 text-${c}-600 flex items-center justify-center mb-3"><i class="fa-solid ${i}"></i></span>
+                <p class="text-xl font-extrabold text-gray-900 leading-tight">${v}</p><p class="text-xs text-gray-500 mt-0.5">${l}</p></div>`).join('');
+
+            const days = Array.from({ length: 7 }, (_, k) => { const d = new Date(); d.setDate(d.getDate() - (6 - k)); return d; });
+            const vals = days.map(d => ok.filter(o => new Date(o.created_at).toDateString() === d.toDateString()).reduce((t, o) => t + (+o.total || 0), 0));
+            const max = Math.max(...vals, 1);
+            document.getElementById('ov-week').innerHTML = days.map((d, i) => `<div class="flex-1 flex flex-col items-center justify-end h-full gap-1.5">
+                <span class="text-[10px] text-gray-500">${vals[i] ? Math.round(vals[i]).toLocaleString() : ''}</span>
+                <div class="w-full rounded-t-md bg-blue-500/90" style="height:${Math.max(vals[i] / max * 100, 3)}%;${vals[i] ? '' : 'background:#e5e7eb'}"></div>
+                <span class="text-[10px] text-gray-400">${d.toLocaleDateString(undefined, { weekday: 'short' })}</span></div>`).join('');
+
+            document.getElementById('ov-status').innerHTML = ORDER_STATUSES.map(st => { const n = orders.filter(o => (o.order_status || 'Order Placed') === st.key).length;
+                return `<div><div class="flex justify-between text-xs mb-1"><span class="text-gray-600">${st.label}</span><b>${n}</b></div><div class="h-1.5 rounded-full bg-gray-100"><div class="h-full rounded-full bg-${st.color}-500" style="width:${orders.length ? n / orders.length * 100 : 0}%"></div></div></div>`; }).join('');
+
+            const sold = {};
+            orders.forEach(o => String(o.items || '').split('\n').forEach(l => { const m = l.match(/^(.*) x(\d+) \(NPR/); if (m) sold[m[1]] = (sold[m[1]] || 0) + +m[2]; }));
+            const top = Object.entries(sold).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            document.getElementById('ov-top').innerHTML = top.length ? top.map(([t, n]) => { const p = products.find(x => x.title === t);
+                return `<div class="flex items-center gap-3">${p ? `<img src="${p.image}" class="w-9 h-9 rounded-lg object-cover">` : ''}<p class="flex-1 text-xs text-gray-700 line-clamp-2">${t.replace(/</g, '&lt;')}</p><b class="text-sm">${n}</b></div>`; }).join('')
+                : '<p class="text-xs text-gray-400">No sales yet.</p>';
+
+            document.getElementById('ov-recent').innerHTML = orders.slice(0, 5).map(o => `<div class="flex items-center justify-between py-2.5 gap-3">
+                <div class="min-w-0"><p class="font-semibold text-gray-900 truncate">${String(o.name || '').replace(/</g, '&lt;')}</p><p class="text-[11px] text-gray-400">${o.id} · ${new Date(o.created_at).toLocaleDateString()}</p></div>
+                <div class="text-right shrink-0"><p class="font-bold text-orange-500 text-sm">${fmt(o.total)}</p><p class="text-[11px] text-gray-500">${o.order_status || 'Order Placed'}</p></div></div>`).join('') || '<p class="text-xs text-gray-400 py-3">No orders yet.</p>';
+        }
+        function renderCustomers() {
+            const t = document.getElementById('cust-table'); if (!t) return;
+            document.getElementById('cust-count').innerText = `${customers.length} registered`;
+            const e = v => String(v ?? '').replace(/</g, '&lt;');
+            t.innerHTML = customers.map(c => { const mine = orders.filter(o => String(o.user_id) === String(c.id) && o.payment_status !== 'Failed');
+                return { c, n: mine.length, sum: mine.reduce((x, o) => x + (+o.total || 0), 0) }; })
+                .sort((a, b) => b.sum - a.sum).map(({ c, n, sum }) => `<tr class="hover:bg-gray-50"><td class="p-3 font-semibold text-gray-800">${e(c.name)}</td><td class="p-3 text-gray-600">${e(c.email)}</td><td class="p-3 text-gray-600">${e(c.phone)}</td><td class="p-3">${n}</td><td class="p-3 font-bold text-blue-600">${fmt(sum)}</td></tr>`).join('')
+                || '<tr><td colspan="5" class="p-6 text-center text-gray-400">No customers yet.</td></tr>';
+        }
+        function exportOrdersCsv() {
+            const q = v => '"' + String(v ?? '').replace(/"/g, '""').replace(/\n/g, ' | ') + '"';
+            const head = ['Order ID', 'Date', 'Name', 'Phone', 'Email', 'Address', 'Location', 'Items', 'Payment method', 'Payment status', 'Order status', 'Total'];
+            const rows = filteredOrders().map(o => [o.id, new Date(o.created_at).toLocaleString(), o.name, o.phone, o.email, o.address, o.delivery_location, o.items, o.payment_method, o.payment_status, o.order_status, o.total].map(q).join(','));
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob(['\ufeff' + [head.map(q).join(','), ...rows].join('\n')], { type: 'text/csv' }));
+            a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+        }
+
         function renderEsewaSettings() {
             document.getElementById('esewa-id-input').value = esewaConfig.accountId || '';
             document.getElementById('esewa-name-input').value = esewaConfig.providerName || '';
@@ -379,7 +485,7 @@
         }
 
         function switchTab(tab) {
-            ['orders', 'products', 'reviews', 'categories', 'delivery', 'esewa', 'account'].forEach(t => {
+            ['overview', 'orders', 'products', 'reviews', 'customers', 'categories', 'delivery', 'esewa', 'account'].forEach(t => {
                 document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
                 document.getElementById(`tab-${t}`).classList.toggle('active-tab', t === tab);
                 document.getElementById(`tab-${t}`).classList.toggle('text-gray-500', t !== tab);
@@ -389,12 +495,13 @@
         /* ADMIN ORDERS MANAGEMENT */
         function renderAdminOrders() {
             const container = document.getElementById('admin-orders-list');
-            if (!orders || orders.length === 0) {
+            const list = filteredOrders();
+            if (!list.length) {
                 container.innerHTML = `<p class="text-sm text-gray-400 py-8 text-center">No orders received yet.</p>`;
                 return;
             }
 
-            container.innerHTML = orders.map(o => `
+            container.innerHTML = list.map(o => `
                 <div class="border rounded-xl p-4 bg-gray-50 space-y-3 text-sm">
                     <div class="flex flex-wrap justify-between items-start gap-2 border-b pb-3">
                         <div>
