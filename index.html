@@ -674,6 +674,25 @@
         }
 
         const CANCELLABLE = ['Order Placed', 'Processing', 'Packed'];
+
+        /* Orders store items as text lines: "<title> x<qty> (NPR <price> each)". Match back to products by title. */
+        function parseOrderItems(o) {
+            return String(o.items || '').split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+                const m = line.match(/^(.*) x(\d+) \(NPR ([\d.,]+) each\)$/);
+                const title = m ? m[1].trim() : line;
+                return { title, qty: m ? m[2] : '', price: m ? m[3] : '', product: products.find(p => (p.title || '').trim() === title) };
+            });
+        }
+        function orderItemsHtml(o) {
+            return `<div class="space-y-2">${parseOrderItems(o).map(it => {
+                const meta = it.qty ? `Qty ${it.qty} · NPR ${it.price} each` : '';
+                if (!it.product) return `<div class="flex items-center gap-3 text-xs text-gray-600"><div class="w-14 h-14 rounded-md bg-gray-100 shrink-0 flex items-center justify-center text-gray-300"><i class="fa-solid fa-image"></i></div><div><p class="line-clamp-2">${esc(it.title)}</p><p class="text-[11px] text-gray-400">${meta}</p></div></div>`;
+                return `<div onclick="viewProduct('${it.product.id}')" class="flex items-center gap-3 cursor-pointer rounded-lg p-1.5 -m-1.5 hover:bg-blue-50 transition">
+                    <img src="${esc(it.product.image)}" alt="" class="w-14 h-14 rounded-md object-cover bg-gray-50 border shrink-0">
+                    <div class="min-w-0"><p class="text-xs font-medium text-gray-800 hover:text-blue-600 line-clamp-2">${esc(it.title)}</p><p class="text-[11px] text-gray-400 mt-0.5">${meta}</p></div>
+                </div>`;
+            }).join('')}</div>`;
+        }
         async function renderReturnsPage(body) {
             body.innerHTML = `<p class="text-sm text-gray-400 py-8">Loading…</p>`;
             const { data, error } = await db.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
@@ -693,7 +712,7 @@
                         <div><p class="font-bold text-gray-900">Order ID: ${esc(o.id)}</p><p class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString()} · ${esc(st)}</p></div>
                         ${action}
                     </div>
-                    <div class="text-xs text-gray-600 whitespace-pre-line mt-2">${esc(o.items)}</div>
+                    <div class="mt-2">${orderItemsHtml(o)}</div>
                     <p class="text-xs font-semibold mt-2">Total: <span class="text-orange-500">NPR ${o.total}</span></p>
                 </div>`;
             }).join('')}</div>`;
@@ -704,7 +723,12 @@
             try {
                 await updateOrderDetails(id, { order_status: status });
                 showToast(status === 'Cancelled' ? 'Order cancelled' : 'Return requested');
-                renderReturnsPage(document.getElementById('account-body'));
+                if (!document.getElementById('view-orders').classList.contains('hidden')) {
+                    const { data } = await db.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+                    if (data) renderUserOrders(data);
+                } else {
+                    renderReturnsPage(document.getElementById('account-body'));
+                }
             } catch (err) { alert('Could not update order: ' + (err.message || '')); }
         }
 
@@ -805,7 +829,8 @@
                 const payStatusColor = payMeta ? `text-${payMeta.color}-600 bg-${payMeta.color}-50` : 'text-gray-600 bg-gray-50';
                 const payLabel = !isEsewa ? 'Cash on Delivery' : (payMeta ? payMeta.label : (o.payment_status || 'Pending'));
 
-                const orderMeta = ORDER_STATUSES.find(s => s.key === o.order_status);
+                const orderMeta = ORDER_STATUSES.concat(EXTRA_ORDER_STATUSES).find(s => s.key === o.order_status);
+                const isDead = o.order_status === 'Cancelled' || o.order_status === 'Return Requested';
                 const orderBadgeColor = orderMeta ? `text-${orderMeta.color}-600 bg-${orderMeta.color}-50` : 'text-blue-600 bg-blue-50';
                 const orderLabel = orderMeta ? orderMeta.label : (o.order_status || 'Order Placed');
 
@@ -833,19 +858,23 @@
                         </div>
                     </div>
 
-                    <div class="flex items-start pt-2 pb-1 px-1">${trackerHtml}</div>
+                    ${isDead ? '' : `<div class="flex items-start pt-2 pb-1 px-1">${trackerHtml}</div>`}
 
                     ${isEsewa && o.transaction_id ? `<p class="text-[11px] text-gray-500">Your submitted Transaction/Reference ID: <span class="font-semibold text-gray-700">${o.transaction_id}</span></p>` : ''}
 
-                    <div class="text-xs text-gray-600 whitespace-pre-line">${o.items}</div>
+                    <div>${orderItemsHtml(o)}</div>
 
                     <div class="flex justify-between items-center text-xs font-semibold pt-2 border-t">
                         <span>Total: <strong class="text-orange-500 text-sm">NPR ${o.total}</strong> (${o.payment_method})</span>
-                        ${isEsewa && o.payment_status !== 'Verified' ? `
+                        <div class="flex gap-2">
+                        ${CANCELLABLE.includes(o.order_status || 'Order Placed') ? `<button onclick="requestOrderChange('${o.id}','Cancelled')" class="border border-red-200 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-md">Cancel Order</button>` : ''}
+                        ${o.order_status === 'Delivered' ? `<button onclick="requestOrderChange('${o.id}','Return Requested')" class="border border-amber-200 text-amber-600 hover:bg-amber-50 px-3 py-1.5 rounded-md">Request Return</button>` : ''}
+                        ${isEsewa && o.payment_status !== 'Verified' && !isDead ? `
                             <button onclick="openEsewaModal('${o.id}')" class="bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700">
                                 ${o.transaction_id ? 'Update Transaction ID' : 'Pay via QR'}
                             </button>
                         ` : ''}
+                        </div>
                     </div>
                 </div>`;
             }).join('');
