@@ -35,7 +35,7 @@
         </div>
     </div>
 
-    <!-- DASHBOARD (markup unchanged from your original) -->
+    <!-- DASHBOARD -->
     <div id="dashboard" class="hidden max-w-7xl mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-8">
             <div>
@@ -50,16 +50,17 @@
 
         <div id="sync-status" class="text-xs text-gray-400 mb-4"></div>
 
+        <!-- TABS -->
         <div class="flex gap-2 mb-6 border-b text-sm font-semibold overflow-x-auto">
-            <button id="tab-overview" onclick="switchTab('overview')" class="px-4 py-2 active-tab">Overview</button>
-            <button id="tab-orders" onclick="switchTab('orders')" class="px-4 py-2 text-gray-500">Customer Orders</button>
-            <button id="tab-products" onclick="switchTab('products')" class="px-4 py-2 text-gray-500">Products</button>
-            <button id="tab-reviews" onclick="switchTab('reviews')" class="px-4 py-2 text-gray-500">Reviews</button>
-            <button id="tab-customers" onclick="switchTab('customers')" class="px-4 py-2 text-gray-500">Customers</button>
-            <button id="tab-categories" onclick="switchTab('categories')" class="px-4 py-2 text-gray-500">Categories</button>
-            <button id="tab-delivery" onclick="switchTab('delivery')" class="px-4 py-2 text-gray-500">Delivery Rates</button>
-            <button id="tab-esewa" onclick="switchTab('esewa')" class="px-4 py-2 text-gray-500">Payment Methods</button>
-            <button id="tab-account" onclick="switchTab('account')" class="px-4 py-2 text-gray-500">Admin Account</button>
+            <button id="tab-overview"    onclick="switchTab('overview')"   class="px-4 py-2 active-tab">Overview</button>
+            <button id="tab-orders"      onclick="switchTab('orders')"     class="px-4 py-2 text-gray-500">Customer Orders</button>
+            <button id="tab-products"    onclick="switchTab('products')"   class="px-4 py-2 text-gray-500">Products</button>
+            <button id="tab-reviews"     onclick="switchTab('reviews')"    class="px-4 py-2 text-gray-500">Reviews</button>
+            <button id="tab-customers"   onclick="switchTab('customers')"  class="px-4 py-2 text-gray-500">Customers</button>
+            <button id="tab-categories"  onclick="switchTab('categories')" class="px-4 py-2 text-gray-500">Categories</button>
+            <button id="tab-delivery"    onclick="switchTab('delivery')"   class="px-4 py-2 text-gray-500">Delivery Rates</button>
+            <button id="tab-esewa"       onclick="switchTab('esewa')"      class="px-4 py-2 text-gray-500">Payment Methods</button>
+            <button id="tab-account"     onclick="switchTab('account')"    class="px-4 py-2 text-gray-500">Admin Account</button>
         </div>
 
         <!-- OVERVIEW PANEL -->
@@ -574,6 +575,7 @@
             catch (err) { alert('Failed to update order status: ' + (err.message || '')); }
         }
 
+        /* PRODUCTS */
         function populateCategorySelect() {
             const select = document.getElementById('p-category');
             const prev = select.value;
@@ -584,7 +586,6 @@
             const badge = document.getElementById('p-badge').value;
             document.getElementById('p-badgetext-wrap').classList.toggle('hidden', badge !== 'gems');
         }
-
         function renderAdminProducts() {
             const list = document.getElementById('admin-product-list');
             document.getElementById('product-count-label').innerText = `${products.length} product${products.length === 1 ? '' : 's'}`;
@@ -610,7 +611,6 @@
                 </div>`;
             }).join('');
         }
-
         function resetProductForm() {
             document.getElementById('product-form').reset();
             document.getElementById('p-id').value = '';
@@ -619,7 +619,6 @@
             document.getElementById('p-badgetext-wrap').classList.add('hidden');
             populateCategorySelect();
         }
-
         async function handleSaveProduct(e) {
             e.preventDefault();
             const id = document.getElementById('p-id').value;
@@ -640,16 +639,12 @@
                 badge: badge || null,
                 badgeText: badge === 'gems' ? document.getElementById('p-badgetext').value.trim() : ''
             };
-
             const btn = document.getElementById('save-product-btn');
             btn.disabled = true; btn.innerText = 'Saving...';
             try { await saveProductDoc(id || null, productData); resetProductForm(); }
-            catch (err) {
-                alert('Could not save product: ' + (err.message || ''));
-            }
+            catch (err) { alert('Could not save product: ' + (err.message || '')); }
             btn.disabled = false; btn.innerText = 'Save Product';
         }
-
         function editProduct(id) {
             const p = products.find(x => x.id === id);
             if (!p) return;
@@ -672,7 +667,6 @@
             document.getElementById('product-form-title').innerHTML = `<i class="fa-solid fa-pen text-blue-600"></i> Edit Product`;
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
         async function deleteProduct(id) {
             const p = products.find(x => x.id === id);
             if (!p) return;
@@ -681,6 +675,7 @@
             catch (err) { alert('Could not delete product: ' + (err.message || '')); }
         }
 
+        /* CATEGORIES */
         function renderCategoryList() {
             const list = document.getElementById('category-list');
             if (categories.length === 0) {
@@ -696,7 +691,6 @@
                 </div>`;
             }).join('');
         }
-
         async function handleAddCategory(e) {
             e.preventDefault();
             const label = document.getElementById('cat-label').value.trim();
@@ -707,7 +701,6 @@
             try { await saveCategoriesDoc(updated); document.getElementById('cat-label').value = ''; }
             catch (err) { alert('Could not save category: ' + (err.message || '')); }
         }
-
         async function deleteCategory(key) {
             const inUse = products.filter(p => p.category === key).length;
             if (inUse > 0) { alert(`Can't delete category — ${inUse} product(s) still use it.`); return; }
@@ -717,6 +710,7 @@
             catch (err) { alert('Could not delete category: ' + (err.message || '')); }
         }
 
+        /* DELIVERY */
         function renderAdminDeliveryRates() {
             const tbody = document.getElementById('delivery-rate-table');
             tbody.innerHTML = deliveryRates.map((r, index) => `
