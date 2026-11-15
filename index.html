@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,9 +6,10 @@
     <title>TechStore Nepal | Electronics & Accessories</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-         <link rel="icon" type="image/x-icon" href="https://play-lh.googleusercontent.com/R-m4sTm-WbWdq1OsVpAAQMVl7DpzN3ssF1MpxslpGS5-PmfO6LyeCWDBPUqijXdiHZrYVo4rNKBdu--lOEAMe-I=w240-h480-rw">
+    <link rel="icon" type="image/x-icon" href="https://play-lh.googleusercontent.com/R-m4sTm-WbWdq1OsVpAAQMVl7DpzN3ssF1MpxslpGS5-PmfO6LyeCWDBPUqijXdiHZrYVo4rNKBdu--lOEAMe-I=w240-h480-rw">
     <style>
         .pay-option.selected { border-color: #2563eb; background: #eff6ff; }
+        .payment-method-card.selected { border-color: #2563eb; background: #eff6ff; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
@@ -322,14 +322,16 @@
 
                     <div>
                         <label class="text-xs font-semibold text-gray-600 block mb-2">Payment Method</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div id="pay-cod" onclick="selectPayment('cod')" class="pay-option cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-2 text-center">
-                                <i class="fa-solid fa-money-bill-wave text-2xl text-green-600"></i>
-                                <span class="text-xs font-semibold">Cash on Delivery</span>
+                        <div class="grid grid-cols-1 gap-2">
+                            <!-- COD Option -->
+                            <div id="pay-cod" onclick="selectPayment('cod')" class="pay-option cursor-pointer border-2 rounded-xl p-3 flex items-center gap-3">
+                                <i class="fa-solid fa-money-bill-wave text-xl text-green-600 w-6 text-center"></i>
+                                <span class="text-sm font-semibold">Cash on Delivery</span>
                             </div>
-                            <div id="pay-esewa" onclick="selectPayment('esewa')" class="pay-option cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-2 text-center">
-                                <i class="fa-solid fa-qrcode text-2xl text-green-600"></i>
-                                <span id="pay-esewa-label" class="text-xs font-semibold">Scan & Pay</span>
+                            
+                            <!-- Dynamic QR Options -->
+                            <div id="dynamic-payment-options" class="space-y-2">
+                                <!-- Injected by JS -->
                             </div>
                         </div>
                     </div>
@@ -432,7 +434,11 @@
         let currentUser = JSON.parse(localStorage.getItem('techstore_user') || 'null');
         let currentEsewaOrderId = null;
         let unsubUserOrders = null;
-        let esewaConfig = { providerName: '', accountId: '', qrImage: '' };
+        
+        // New global for multiple payment methods
+        window.checkoutPaymentMethods = [];
+        let selectedPaymentMethodId = null; 
+
         let pendingCheckout = false;
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -440,11 +446,13 @@
             subscribeProducts(list => { products = list; renderProducts(applyActiveFilter()); renderBestSellers(); renderCategoryCircles(); hideLoadingBanner(); });
             subscribeCategories(list => { categories = list; renderFilterBar(); renderCategoryCircles(); });
             subscribeDelivery(list => { deliveryRates = list; populateLocationOptions(); updateCartTotals(); });
-            subscribePaymentQRConfig(config => {
-                esewaConfig = config;
-                const label = document.getElementById('pay-esewa-label');
-                if (label) label.innerText = config.providerName ? `Scan & Pay (${config.providerName})` : 'Scan & Pay';
+            
+            // Updated: Multiple Payment Methods
+            subscribePaymentMethods(methods => {
+                window.checkoutPaymentMethods = methods;
+                renderCheckoutPaymentOptions(methods);
             });
+            
             selectPayment('cod');
             updateUserNav();
         });
@@ -607,7 +615,7 @@
                     <div class="flex justify-between items-center text-xs font-semibold pt-2 border-t">
                         <span>Total: <strong class="text-orange-500 text-sm">NPR ${o.total}</strong> (${o.payment_method})</span>
                         ${isEsewa && o.payment_status !== 'Verified' ? `
-                            <button onclick="openEsewaModal('${o.id}')" class="bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700">
+                            <button onclick="openEsewaModal('${o.id}', '${o.payment_method}')" class="bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700">
                                 ${o.transaction_id ? 'Update Transaction ID' : 'Pay via QR'}
                             </button>
                         ` : ''}
@@ -1038,23 +1046,71 @@
         function openCart() { document.getElementById('cart-modal').classList.remove('hidden'); }
         function closeCart() { document.getElementById('cart-modal').classList.add('hidden'); }
 
-        function selectPayment(method) {
-            selectedPayment = method;
-            document.getElementById('pay-cod').classList.toggle('selected', method === 'cod');
-            document.getElementById('pay-esewa').classList.toggle('selected', method === 'esewa');
+        // UPDATED: Payment Selection Logic
+        function renderCheckoutPaymentOptions(methods) {
+            const container = document.getElementById('dynamic-payment-options');
+            if (!methods || methods.length === 0) {
+                container.innerHTML = `<p class="text-xs text-red-500">No digital payment methods configured by store.</p>`;
+                return;
+            }
+
+            container.innerHTML = methods.map((pm, i) => `
+                <div id="pay-dynamic-${pm.id}" onclick="selectPayment('dynamic', '${pm.id}')" class="pay-option cursor-pointer border-2 rounded-xl p-3 flex items-center gap-3">
+                    <i class="fa-solid fa-qrcode text-xl text-blue-600 w-6 text-center"></i>
+                    <span class="text-sm font-semibold">Scan & Pay (${pm.providerName})</span>
+                </div>
+            `).join('');
         }
 
-        function openEsewaModal(orderId) {
+        function selectPayment(type, methodId = null) {
+            // Reset all
+            document.getElementById('pay-cod').classList.remove('selected');
+            document.querySelectorAll('.pay-option').forEach(el => el.classList.remove('selected'));
+
+            if (type === 'cod') {
+                selectedPayment = 'cod';
+                selectedPaymentMethodId = null;
+                document.getElementById('pay-cod').classList.add('selected');
+            } else if (type === 'dynamic') {
+                selectedPayment = 'dynamic';
+                selectedPaymentMethodId = methodId;
+                const el = document.getElementById(`pay-dynamic-${methodId}`);
+                if (el) el.classList.add('selected');
+            }
+        }
+
+        function openEsewaModal(orderId, specificProviderName = null) {
             currentEsewaOrderId = orderId;
             document.getElementById('esewa-tx-input').value = '';
 
-            const accountId = esewaConfig.accountId || '9800000000';
-            const providerName = esewaConfig.providerName || 'Mobile Banking';
-            const qrSrc = esewaConfig.qrImage
-                ? esewaConfig.qrImage
-                : `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(accountId)}`;
+            let methodToUse = null;
+
+            // If called from order history, find the method by name
+            if (specificProviderName && specificProviderName !== 'Cash on Delivery') {
+                methodToUse = window.checkoutPaymentMethods.find(m => m.providerName === specificProviderName);
+            } 
+            
+            // If not found, or if called from checkout, use the selected one
+            if (!methodToUse && selectedPaymentMethodId) {
+                methodToUse = window.checkoutPaymentMethods.find(m => m.id === selectedPaymentMethodId);
+            }
+
+            // Fallback
+            if (!methodToUse && window.checkoutPaymentMethods.length > 0) {
+                methodToUse = window.checkoutPaymentMethods[0];
+            }
+
+            if (!methodToUse) {
+                alert('Payment configuration not found. Please contact store.');
+                return;
+            }
+
+            const qrSrc = methodToUse.qrImage
+                ? methodToUse.qrImage
+                : `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(methodToUse.accountId)}`;
+                
             document.getElementById('esewa-qr-image').src = qrSrc;
-            document.getElementById('esewa-id-label').innerText = `${providerName} ID: ${accountId}`;
+            document.getElementById('esewa-id-label').innerText = `${methodToUse.providerName} ID: ${methodToUse.accountId}`;
 
             document.getElementById('esewa-modal').classList.remove('hidden');
             document.getElementById('esewa-modal').classList.add('flex');
@@ -1116,7 +1172,13 @@
             const total = subtotal + rate.charge;
             const orderId = 'ORD' + Date.now();
             const itemsSummary = cart.map(c => `${c.title} x${c.qty} (NPR ${c.price} each)`).join('\n');
-            const paymentLabel = selectedPayment === 'esewa' ? (esewaConfig.providerName || 'Mobile Banking') : 'Cash on Delivery';
+            
+            // Determine final payment label
+            let paymentLabel = 'Cash on Delivery';
+            if (selectedPayment === 'dynamic') {
+                const selectedMethod = window.checkoutPaymentMethods.find(m => m.id === selectedPaymentMethodId);
+                paymentLabel = selectedMethod ? selectedMethod.providerName : 'Mobile Banking';
+            }
 
             const payload = {
                 id: orderId,
@@ -1126,7 +1188,7 @@
                 payment_method: paymentLabel,
                 items: itemsSummary,
                 subtotal, delivery_charge: rate.charge, total,
-                payment_status: selectedPayment === 'esewa' ? 'Pending' : 'Cash on Delivery',
+                payment_status: selectedPayment === 'dynamic' ? 'Pending' : 'Cash on Delivery',
                 order_status: 'Order Placed'
             };
 
@@ -1141,7 +1203,7 @@
                 btn.disabled = false;
                 btn.innerHTML = `<i class="fa-solid fa-lock text-sm"></i> Place Order`;
                 alert('Could not place your order. ' + (err.message || 'Please try again in a moment.'));
-                return; // stop here — do NOT clear cart or show success if the order was never saved
+                return; // stop here
             }
 
             fetch(FORMSPREE_ENDPOINT, {
@@ -1157,7 +1219,7 @@
             updateCartTotals();
             closeCart();
 
-            if (selectedPayment === 'esewa') {
+            if (selectedPayment === 'dynamic') {
                 openEsewaModal(orderId);
             } else {
                 openConfirmModal(`Order ${orderId} placed with Cash on Delivery. Track its status anytime under 'My Orders'.`);
