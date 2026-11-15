@@ -15,11 +15,11 @@ const SEED_CATEGORIES = [
     { key: 'power-banks', label: 'Power Banks' }
 ];
 
-const SEED_PAYMENT_QR = {
-    providerName: 'eSewa',
-    accountId: '9800000000',
-    qrImage: ''
-};
+// Updated: Multiple payment methods (Array)
+const SEED_PAYMENT_METHODS = [
+    { id: 'pm-1', providerName: 'eSewa', accountId: '9800000000', qrImage: '' },
+    { id: 'pm-2', providerName: 'Khalti', accountId: '9800000001', qrImage: '' }
+];
 
 /* Canonical status lists — used by both admin dashboard and store front */
 const PAYMENT_STATUSES = [
@@ -99,7 +99,7 @@ const SEED_PRODUCTS = [
       description: 'A reliable high-capacity power bank with fast PD charging and a clean, minimal design.' }
 ];
 
-/* ---------- One-time Seeding ---------- */
+/* ---------- One-time Seeding & Migration ---------- */
 async function ensureSeeded() {
     try {
         const { data: products } = await db.from('products').select('id').limit(1);
@@ -117,9 +117,23 @@ async function ensureSeeded() {
             await db.from('meta').upsert({ id: 'delivery', list: SEED_DELIVERY }, { onConflict: 'id' });
         }
 
-        const { data: paymentQr } = await db.from('meta').select('list').eq('id', 'payment_qr').single();
-        if (!paymentQr) {
-            await db.from('meta').upsert({ id: 'payment_qr', list: SEED_PAYMENT_QR }, { onConflict: 'id' });
+        // --- MIGRATION LOGIC FOR PAYMENT METHODS ---
+        const { data: paymentMethods } = await db.from('meta').select('list').eq('id', 'payment_methods').single();
+        
+        if (!paymentMethods) {
+            // Check if old single QR exists to migrate it
+            const { data: oldPaymentQr } = await db.from('meta').select('list').eq('id', 'payment_qr').single();
+            
+            if (oldPaymentQr && oldPaymentQr.list) {
+                // Convert old single object into array format
+                const migratedList = [{ id: 'pm-1', ...oldPaymentQr.list }];
+                await db.from('meta').upsert({ id: 'payment_methods', list: migratedList }, { onConflict: 'id' });
+                // Clean up old record to prevent confusion
+                await db.from('meta').delete().eq('id', 'payment_qr');
+            } else {
+                // If neither exists, seed the defaults
+                await db.from('meta').upsert({ id: 'payment_methods', list: SEED_PAYMENT_METHODS }, { onConflict: 'id' });
+            }
         }
     } catch (e) {
         console.error('Seeding error:', e);
@@ -178,17 +192,21 @@ function subscribeDelivery(callback) {
     return () => db.removeChannel(channel);
 }
 
-function subscribePaymentQRConfig(callback) {
+/* ---------- Multiple Payment Methods Logic ---------- */
+function subscribePaymentMethods(callback) {
     const fetchAndCallback = async () => {
-        const { data, error } = await db.from('meta').select('list').eq('id', 'payment_qr').single();
-        if (!error && data) callback(data.list || SEED_PAYMENT_QR);
-        else callback(SEED_PAYMENT_QR);
+        const { data, error } = await db.from('meta').select('list').eq('id', 'payment_methods').single();
+        if (!error && data) {
+            callback(data.list || []);
+        } else {
+            callback([]);
+        }
     };
 
     fetchAndCallback();
 
-    const channel = db.channel('realtime:payment_qr')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'meta', filter: 'id=eq.payment_qr' }, () => {
+    const channel = db.channel('realtime:payment_methods')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'meta', filter: 'id=eq.payment_methods' }, () => {
             fetchAndCallback();
         })
         .subscribe();
@@ -196,14 +214,10 @@ function subscribePaymentQRConfig(callback) {
     return () => db.removeChannel(channel);
 }
 
-async function savePaymentQRConfig(config) {
-    const { error } = await db.from('meta').upsert({ id: 'payment_qr', list: config }, { onConflict: 'id' });
+async function savePaymentMethods(methodsList) {
+    const { error } = await db.from('meta').upsert({ id: 'payment_methods', list: methodsList }, { onConflict: 'id' });
     if (error) throw error;
 }
-
-// Backward-compatible aliases (older cached pages may still call these names)
-const subscribeEsewaConfig = subscribePaymentQRConfig;
-const saveEsewaConfig = savePaymentQRConfig;
 
 /* ---------- Orders & User Auth Helpers ---------- */
 async function registerUser(name, email, phone, password) {
