@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -446,7 +445,7 @@
 
     <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="shared.js?v=6"></script>
+    <script src="shared.js?v=7"></script>
     <script>
         const FORMSPREE_ENDPOINT = "https://formspree.io/f/mdaqrzvn";
 
@@ -838,7 +837,7 @@
                 const payStatusColor = payMeta ? `text-${payMeta.color}-600 bg-${payMeta.color}-50` : 'text-gray-600 bg-gray-50';
                 const payLabel = !isEsewa ? 'Cash on Delivery' : (payMeta ? payMeta.label : (o.payment_status || 'Pending'));
 
-                const orderMeta = ORDER_STATUSES.concat(typeof EXTRA_ORDER_STATUSES !== 'undefined' ? EXTRA_ORDER_STATUSES : []).find(s => s.key === o.order_status);
+                const orderMeta = ORDER_STATUSES.concat(typeof EXTRA_ORDER_STATUSES !== 'undefined' ? EXTRA_ORDER_STATUSES : [{ key: 'Cancelled', color: 'red', label: 'Cancelled' }, { key: 'Return Requested', color: 'amber', label: 'Return Requested' }]).find(s => s.key === o.order_status);
                 const isDead = o.order_status === 'Cancelled' || o.order_status === 'Return Requested';
                 const orderBadgeColor = orderMeta ? `text-${orderMeta.color}-600 bg-${orderMeta.color}-50` : 'text-blue-600 bg-blue-50';
                 const orderLabel = orderMeta ? orderMeta.label : (o.order_status || 'Order Placed');
