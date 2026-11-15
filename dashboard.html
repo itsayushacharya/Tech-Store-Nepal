@@ -6,7 +6,7 @@
     <title>TechStore Nepal | Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-          <link rel="icon" type="image/x-icon" href="https://play-lh.googleusercontent.com/R-m4sTm-WbWdq1OsVpAAQMVl7DpzN3ssF1MpxslpGS5-PmfO6LyeCWDBPUqijXdiHZrYVo4rNKBdu--lOEAMe-I=w240-h480-rw">
+    <link rel="icon" type="image/x-icon" href="https://play-lh.googleusercontent.com/R-m4sTm-WbWdq1OsVpAAQMVl7DpzN3ssF1MpxslpGS5-PmfO6LyeCWDBPUqijXdiHZrYVo4rNKBdu--lOEAMe-I=w240-h480-rw">
     <style>.active-tab { border-bottom: 2px solid #2563eb; color: #2563eb; }</style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
@@ -30,7 +30,6 @@
                 </div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm">Access Dashboard</button>
             </form>
-              <!--  <p class="text-[11px] text-gray-400 mt-4 text-center">Default login: <b>ayushacharya</b> / <b>Ayush@2059</b></p>-->
             <a href="index.html" class="block text-center text-xs text-gray-400 hover:text-blue-600 mt-3">← Back to store</a>
         </div>
     </div>
@@ -55,7 +54,7 @@
             <button id="tab-products" onclick="switchTab('products')" class="px-4 py-2 text-gray-500">Products</button>
             <button id="tab-categories" onclick="switchTab('categories')" class="px-4 py-2 text-gray-500">Categories</button>
             <button id="tab-delivery" onclick="switchTab('delivery')" class="px-4 py-2 text-gray-500">Delivery Rates</button>
-            <button id="tab-esewa" onclick="switchTab('esewa')" class="px-4 py-2 text-gray-500">Payment QR</button>
+            <button id="tab-payments" onclick="switchTab('payments')" class="px-4 py-2 text-gray-500">Payment Methods</button>
             <button id="tab-account" onclick="switchTab('account')" class="px-4 py-2 text-gray-500">Admin Account</button>
         </div>
 
@@ -181,30 +180,20 @@
             </div>
         </div>
 
-        <!-- PAYMENT QR PANEL -->
-        <div id="panel-esewa" class="hidden max-w-xl">
+        <!-- PAYMENT METHODS PANEL -->
+        <div id="panel-payments" class="hidden">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-qrcode text-blue-600"></i> Payment QR Settings</h2>
-                <p class="text-xs text-gray-500 mb-4">This controls the QR code customers scan at checkout when they choose "Scan & Pay". Works for any wallet or bank — eSewa, Khalti, IME Pay, or a direct bank transfer QR.</p>
-                <form onsubmit="handleSaveEsewa(event)" class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
                     <div>
-                        <label class="text-xs font-semibold text-gray-600 block mb-1">Wallet / Bank Name</label>
-                        <input type="text" id="esewa-name-input" placeholder="e.g. eSewa, Khalti, IME Pay, or your bank's name" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                        <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-credit-card text-blue-600"></i> Payment Methods</h2>
+                        <p class="text-xs text-gray-500 mt-1">Manage multiple QR codes or bank details for customers to pay.</p>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600 block mb-1">Account ID / Phone Number</label>
-                        <input type="text" id="esewa-id-input" placeholder="98XXXXXXXX or account number" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600 block mb-1">QR Image URL</label>
-                        <input type="url" id="esewa-qr-input" placeholder="Paste your real payment QR image link, or leave blank to auto-generate one from the ID above" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-                        <p class="text-[11px] text-gray-400 mt-1">Leave blank to auto-generate a scannable placeholder QR from the ID above. For your real merchant QR, upload the image somewhere (e.g. imgur) and paste the direct link here.</p>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <img id="esewa-preview" src="" class="w-24 h-24 rounded border bg-gray-50 object-contain">
-                        <button type="submit" class="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700">Save Payment QR Settings</button>
-                    </div>
-                </form>
+                    <button onclick="openPaymentForm()" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700"><i class="fa-solid fa-plus mr-1"></i>Add New Payment Method</button>
+                </div>
+                
+                <div id="payment-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Payment cards will be injected here -->
+                </div>
             </div>
         </div>
 
@@ -218,6 +207,37 @@
         </div>
     </div>
 
+    <!-- PAYMENT MODAL -->
+    <div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+            <button onclick="closePaymentForm()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+            <h2 id="payment-modal-title" class="text-lg font-bold mb-4">Add Payment Method</h2>
+            <form id="payment-form" onsubmit="handleSavePayment(event)" class="space-y-4">
+                <input type="hidden" id="pay-id">
+                <div>
+                    <label class="text-xs font-semibold text-gray-600 block mb-1">Provider / Bank Name *</label>
+                    <input type="text" id="pay-provider" required placeholder="e.g. eSewa, Khalti, NIC Asia Bank" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-600 block mb-1">Account ID / Phone Number *</label>
+                    <input type="text" id="pay-account" required placeholder="98XXXXXXXX or Account No." class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-600 block mb-1">QR Image URL (Optional)</label>
+                    <input type="url" id="pay-qr" placeholder="https://..." class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-[11px] text-gray-400 mt-1">Leave blank to auto-generate a scannable placeholder QR from the ID above.</p>
+                </div>
+                <div class="flex items-center gap-4 pt-2">
+                    <div class="w-20 h-20 bg-gray-50 rounded border flex items-center justify-center overflow-hidden shrink-0">
+                        <img id="pay-preview" src="" class="w-full h-full object-contain hidden">
+                        <i id="pay-preview-icon" class="fa-solid fa-qrcode text-gray-300 text-3xl"></i>
+                    </div>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Save Method</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="shared.js?v=5"></script>
@@ -228,8 +248,9 @@
         let categories = [];
         let deliveryRates = [];
         let orders = [];
-        let esewaConfig = { providerName: '', accountId: '', qrImage: '' };
-        let unsubProducts = null, unsubCategories = null, unsubDelivery = null, unsubOrders = null, unsubEsewa = null;
+        let paymentMethods = [];
+        
+        let unsubProducts = null, unsubCategories = null, unsubDelivery = null, unsubOrders = null, unsubPayments = null;
 
         function handleAdminLogin(e) {
             e.preventDefault();
@@ -250,7 +271,7 @@
             if (unsubCategories) unsubCategories();
             if (unsubDelivery) unsubDelivery();
             if (unsubOrders) unsubOrders();
-            if (unsubEsewa) unsubEsewa();
+            if (unsubPayments) unsubPayments();
             document.getElementById('dashboard').classList.add('hidden');
             document.getElementById('login-gate').classList.remove('hidden');
         }
@@ -279,42 +300,15 @@
                 deliveryRates = list;
                 renderAdminDeliveryRates();
             });
-            unsubEsewa = subscribePaymentQRConfig(config => {
-                esewaConfig = config;
-                renderEsewaSettings();
+            
+            unsubPayments = subscribePaymentMethods(list => {
+                paymentMethods = list;
+                renderPaymentMethods();
             });
         }
 
-        function renderEsewaSettings() {
-            document.getElementById('esewa-id-input').value = esewaConfig.accountId || '';
-            document.getElementById('esewa-name-input').value = esewaConfig.providerName || '';
-            document.getElementById('esewa-qr-input').value = esewaConfig.qrImage || '';
-            const previewSrc = esewaConfig.qrImage
-                ? esewaConfig.qrImage
-                : `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(esewaConfig.accountId || '')}`;
-            document.getElementById('esewa-preview').src = previewSrc;
-        }
-
-        async function handleSaveEsewa(e) {
-            e.preventDefault();
-            const config = {
-                accountId: document.getElementById('esewa-id-input').value.trim(),
-                providerName: document.getElementById('esewa-name-input').value.trim(),
-                qrImage: document.getElementById('esewa-qr-input').value.trim()
-            };
-            try {
-                await savePaymentQRConfig(config);
-                esewaConfig = config;
-                renderEsewaSettings();
-                alert('Payment QR settings saved.');
-            } catch (err) {
-                console.error('Save payment QR settings failed:', err);
-                alert('Could not save payment QR settings: ' + (err.message || JSON.stringify(err)));
-            }
-        }
-
         function switchTab(tab) {
-            ['orders', 'products', 'categories', 'delivery', 'esewa', 'account'].forEach(t => {
+            ['orders', 'products', 'categories', 'delivery', 'payments', 'account'].forEach(t => {
                 document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
                 document.getElementById(`tab-${t}`).classList.toggle('active-tab', t === tab);
                 document.getElementById(`tab-${t}`).classList.toggle('text-gray-500', t !== tab);
@@ -598,6 +592,148 @@
             } catch (err) {
                 console.error(err);
                 alert('Could not remove delivery location: ' + (err.message || JSON.stringify(err)));
+            }
+        }
+
+        /* --- NEW PAYMENT METHODS LOGIC --- */
+        
+        function renderPaymentMethods() {
+            const container = document.getElementById('payment-list');
+            if (!paymentMethods || paymentMethods.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-8 text-gray-400 text-sm border-2 border-dashed rounded-xl">No payment methods added. Add one to get started.</div>`;
+                return;
+            }
+
+            container.innerHTML = paymentMethods.map((pm, index) => {
+                const qrSrc = pm.qrImage || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pm.accountId)}`;
+                return `
+                <div class="border rounded-xl p-4 bg-gray-50 flex flex-col justify-between">
+                    <div class="flex gap-4 mb-4">
+                        <div class="w-16 h-16 bg-white rounded border flex items-center justify-center overflow-hidden shrink-0">
+                            <img src="${qrSrc}" class="w-full h-full object-contain" onerror="this.src='https://via.placeholder.com/100?text=QR'">
+                        </div>
+                        <div class="overflow-hidden">
+                            <h3 class="font-bold text-gray-900 truncate">${pm.providerName}</h3>
+                            <p class="text-xs text-gray-600 font-mono mt-1">${pm.accountId}</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 border-t pt-3 mt-auto">
+                        <button onclick="openPaymentForm(${index})" class="text-xs font-semibold text-blue-600 hover:underline">Edit</button>
+                        <button onclick="deletePaymentMethod(${index})" class="text-xs font-semibold text-red-500 hover:underline">Delete</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function openPaymentForm(index = -1) {
+            const modal = document.getElementById('payment-modal');
+            const form = document.getElementById('payment-form');
+            const title = document.getElementById('payment-modal-title');
+            
+            form.reset();
+            document.getElementById('pay-id').value = index; 
+            
+            if (index >= 0) {
+                const pm = paymentMethods[index];
+                title.innerText = 'Edit Payment Method';
+                document.getElementById('pay-provider').value = pm.providerName;
+                document.getElementById('pay-account').value = pm.accountId;
+                document.getElementById('pay-qr').value = pm.qrImage || '';
+                
+                const previewSrc = pm.qrImage || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pm.accountId)}`;
+                updateModalPreview(previewSrc);
+            } else {
+                title.innerText = 'Add Payment Method';
+                updateModalPreview('');
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePaymentForm() {
+            document.getElementById('payment-modal').classList.add('hidden');
+            document.getElementById('payment-modal').classList.remove('flex');
+        }
+
+        function updateModalPreview(src) {
+            const img = document.getElementById('pay-preview');
+            const icon = document.getElementById('pay-preview-icon');
+            if (src) {
+                img.src = src;
+                img.classList.remove('hidden');
+                icon.classList.add('hidden');
+            } else {
+                img.classList.add('hidden');
+                icon.classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('pay-account').addEventListener('input', (e) => {
+            if (!document.getElementById('pay-qr').value) {
+                const val = e.target.value.trim();
+                if (val) {
+                    updateModalPreview(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(val)}`);
+                } else {
+                    updateModalPreview('');
+                }
+            }
+        });
+        
+        document.getElementById('pay-qr').addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val) {
+                updateModalPreview(val);
+            } else {
+                const acc = document.getElementById('pay-account').value.trim();
+                if (acc) {
+                    updateModalPreview(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(acc)}`);
+                } else {
+                    updateModalPreview('');
+                }
+            }
+        });
+
+        async function handleSavePayment(e) {
+            e.preventDefault();
+            const index = parseInt(document.getElementById('pay-id').value);
+            
+            const config = {
+                providerName: document.getElementById('pay-provider').value.trim(),
+                accountId: document.getElementById('pay-account').value.trim(),
+                qrImage: document.getElementById('pay-qr').value.trim()
+            };
+
+            let updatedList = [...paymentMethods];
+            
+            if (index >= 0) {
+                updatedList[index] = { ...updatedList[index], ...config };
+            } else {
+                updatedList.push({ ...config, id: Date.now().toString() });
+            }
+
+            try {
+                await savePaymentMethods(updatedList);
+                closePaymentForm();
+            } catch (err) {
+                console.error('Save payment method failed:', err);
+                alert('Could not save payment method: ' + (err.message || JSON.stringify(err)));
+            }
+        }
+
+        async function deletePaymentMethod(index) {
+            if (paymentMethods.length <= 1) {
+                alert('At least one payment method is recommended. You can still delete it, but customers will not be able to pay.');
+            }
+            if (!confirm('Delete this payment method?')) return;
+            
+            const updatedList = paymentMethods.filter((_, i) => i !== index);
+            try {
+                await savePaymentMethods(updatedList);
+            } catch (err) {
+                console.error('Delete payment method failed:', err);
+                alert('Could not delete payment method: ' + (err.message || JSON.stringify(err)));
             }
         }
     </script>
